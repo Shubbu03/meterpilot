@@ -1,0 +1,27 @@
+{
+  "name": "meterpilot",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.13",
+  "engines": {
+    "bun": "1.3.13"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' --if-present build",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "bun run --filter '*' --if-present typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.8",
+    "@types/bun": "1.3.14",
+    "typescript": "7.0.2"
+  }
+}
