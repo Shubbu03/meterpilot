@@ -1,0 +1,19 @@
+{
+  "name": "@meterpilot/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./corrections": "./src/corrections.ts",
+    "./idempotency": "./src/idempotency.ts",
+    "./identity": "./src/identity.ts",
+    "./time": "./src/time.ts",
+    "./versioning": "./src/versioning.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts src/corrections.ts src/idempotency.ts src/identity.ts src/time.ts src/versioning.ts --outdir dist --target browser --packages external",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  }
+}
