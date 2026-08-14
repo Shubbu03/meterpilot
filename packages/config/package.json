@@ -1,0 +1,21 @@
+{
+  "name": "@meterpilot/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./database": "./src/database.ts",
+    "./server": "./src/server.ts",
+    "./web": "./src/web.ts",
+    "./worker": "./src/worker.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts src/database.ts src/server.ts src/web.ts src/worker.ts --outdir dist --target bun --packages external",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}
