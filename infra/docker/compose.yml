@@ -1,0 +1,23 @@
+name: meterpilot
+
+services:
+  postgres:
+    image: postgres:18.4-alpine3.23
+    environment:
+      POSTGRES_DB: meterpilot
+      POSTGRES_PASSWORD: meterpilot_local
+      POSTGRES_USER: meterpilot
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=meterpilot --dbname=meterpilot"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+    stop_grace_period: 10s
+
+volumes:
+  postgres_data:

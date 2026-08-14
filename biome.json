@@ -7,6 +7,11 @@
       }
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "files": {
     "includes": ["**", "!!**/dist", "!!**/coverage", "!!api-metering-project-plan.md"]
   },

@@ -13,8 +13,14 @@
   "scripts": {
     "build": "bun run --filter '*' --if-present build",
     "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
+    "db:check": "bun run --cwd packages/db db:check",
+    "db:generate": "bun run --cwd packages/db db:generate",
+    "db:migrate": "bun run --cwd packages/db db:migrate",
     "format": "biome format --write .",
     "format:check": "biome format .",
+    "infra:down": "docker compose -f infra/docker/compose.yml down",
+    "infra:logs": "docker compose -f infra/docker/compose.yml logs --follow postgres",
+    "infra:up": "docker compose -f infra/docker/compose.yml up --detach --wait postgres",
     "lint": "biome lint .",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "bun run --filter '*' --if-present typecheck"

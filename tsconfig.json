@@ -9,6 +9,7 @@
     "module": "Preserve",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
+    "noEmit": true,
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
