@@ -9,9 +9,9 @@
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun --packages external",
-    "db:check": "drizzle-kit check",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:check": "bun --env-file=.env x drizzle-kit check",
+    "db:generate": "bun --env-file=.env x drizzle-kit generate",
+    "db:migrate": "bun --env-file=.env x drizzle-kit migrate",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },

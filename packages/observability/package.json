@@ -1,0 +1,20 @@
+{
+  "name": "@meterpilot/observability",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./logger": "./src/logger.ts",
+    "./metrics": "./src/metrics.ts",
+    "./tracing": "./src/tracing.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts src/logger.ts src/metrics.ts src/tracing.ts --outdir dist --target browser --packages external",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.1"
+  }
+}
