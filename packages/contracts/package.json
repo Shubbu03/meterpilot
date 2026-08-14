@@ -1,0 +1,19 @@
+{
+  "name": "@meterpilot/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./common": "./src/common.ts",
+    "./events": "./src/events.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts src/common.ts src/events.ts --outdir dist --target browser --packages external",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}
