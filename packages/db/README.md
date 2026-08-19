@@ -4,22 +4,23 @@ Shared PostgreSQL access and Drizzle migration tooling using Bun's native SQL cl
 
 ## Commands
 
-Create the database package's local environment file once:
+Schema generation and validation do not connect to PostgreSQL and do not require an environment
+file:
 
 ```bash
-cp packages/db/.env.example packages/db/.env
-```
-
-Then run database commands from the repository root:
-
-```bash
-bun run infra:up
 bun run db:generate
 bun run db:check
+```
+
+Only create the database package's local environment file when you are ready to apply migrations:
+
+```bash
+cp -n packages/db/.env.example packages/db/.env
+bun run infra:up
 bun run db:migrate
 ```
 
 The root scripts execute Drizzle with `packages/db` as its working directory, and the package
-scripts explicitly load `packages/db/.env`. No repository-level environment file is used.
+`db:migrate` explicitly loads `packages/db/.env`. No repository-level environment file is used.
 
 `db:generate` creates migration files from the declared schema. `db:migrate` is the only command here that changes a database.

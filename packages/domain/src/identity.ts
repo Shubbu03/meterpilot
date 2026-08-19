@@ -15,6 +15,16 @@ export type PlanId = DomainIdentifier<"PlanId">;
 export type PlanVersionId = DomainIdentifier<"PlanVersionId">;
 export type SubscriptionId = DomainIdentifier<"SubscriptionId">;
 
+export const ORGANIZATION_MEMBERSHIP_ROLES = [
+  "owner",
+  "admin",
+  "developer",
+  "analyst",
+  "support",
+] as const;
+
+export type OrganizationMembershipRole = (typeof ORGANIZATION_MEMBERSHIP_ROLES)[number];
+
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 const IDENTIFIER_MAX_LENGTH = 128;
 

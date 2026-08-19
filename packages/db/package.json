@@ -9,14 +9,15 @@
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun --packages external",
-    "db:check": "bun --env-file=.env x drizzle-kit check",
-    "db:generate": "bun --env-file=.env x drizzle-kit generate",
+    "db:check": "bun x drizzle-kit check",
+    "db:generate": "bun x drizzle-kit generate",
     "db:migrate": "bun --env-file=.env x drizzle-kit migrate",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
     "@meterpilot/config": "workspace:*",
+    "@meterpilot/domain": "workspace:*",
     "drizzle-orm": "1.0.0-rc.4"
   },
   "devDependencies": {
