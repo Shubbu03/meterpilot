@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { ServerConfig } from "@meterpilot/config/server";
 import { createObservability, type Logger } from "@meterpilot/observability";
 
+import type { AuthGateway } from "../src/features/identity/authentication";
 import { type BootstrapDependencies, bootstrapServer } from "../src/runtime/bootstrap";
 import {
   type ServerFactoryOptions,
@@ -9,6 +10,7 @@ import {
   type ShutdownSignalSource,
   startServer,
 } from "../src/runtime/server";
+import { createOrganizationRepositoryStub } from "./helpers";
 
 type LogEntry = Readonly<Record<string, unknown>>;
 
@@ -49,6 +51,8 @@ function createSignalSource() {
 }
 
 const testConfig: ServerConfig = {
+  authBaseUrl: "http://localhost:4321",
+  authSecret: "test-secret-that-is-at-least-32-characters-long",
   databaseUrl: "postgresql://meterpilot:meterpilot_local@127.0.0.1:5432/meterpilot",
   host: "127.0.0.1",
   logLevel: "debug",
@@ -173,16 +177,23 @@ describe("server bootstrap", () => {
       service: "meterpilot-server",
       write: () => undefined,
     });
+    const auth: AuthGateway = {
+      getSession: () => Promise.resolve(null),
+      handler: () => Promise.resolve(new Response("auth response")),
+    };
     const dependencies: BootstrapDependencies = {
       checkDatabaseHealth(client) {
         checkedClient = client;
         return Promise.resolve();
       },
+      createAuthGateway: () => auth,
       createDatabase: () => ({
         client: databaseClient,
         close: () => Promise.resolve(),
+        db: {} as never,
       }),
       createObservability: () => observability,
+      createOrganizationRepository: () => createOrganizationRepositoryStub(),
       parseServerConfig: () => testConfig,
       startServer(options) {
         receivedRuntimeOptions = options;
@@ -216,14 +227,20 @@ describe("server bootstrap", () => {
     };
     const dependencies: BootstrapDependencies = {
       checkDatabaseHealth: () => Promise.resolve(),
+      createAuthGateway: () => ({
+        getSession: () => Promise.resolve(null),
+        handler: () => Promise.resolve(new Response("auth response")),
+      }),
       createDatabase: () => ({
         client: {} as never,
         close: () => {
           databaseClosed = true;
           return Promise.resolve();
         },
+        db: {} as never,
       }),
       createObservability: () => observability,
+      createOrganizationRepository: () => createOrganizationRepositoryStub(),
       parseServerConfig: () => testConfig,
       startServer: () => {
         throw startupError;

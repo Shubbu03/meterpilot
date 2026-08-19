@@ -6,25 +6,37 @@ import {
   type ObservabilityOptions,
 } from "@meterpilot/observability";
 
+import {
+  createAuthentication,
+  createAuthGateway,
+  type AuthGateway,
+  type AuthenticationOptions,
+} from "../features/identity/authentication";
+import { createDrizzleOrganizationRepository } from "../features/organizations/drizzle-repository";
+import type { OrganizationRepository } from "../features/organizations/repository";
 import { createApp } from "../http/app";
 import { type ServerRuntime, type StartServerOptions, startServer } from "./server";
 
 const SERVICE_NAME = "meterpilot-server";
 
-type RuntimeDatabase = Pick<Database, "client" | "close">;
+type RuntimeDatabase = Pick<Database, "client" | "close" | "db">;
 
 export type BootstrapDependencies = Readonly<{
   checkDatabaseHealth: (client: RuntimeDatabase["client"]) => Promise<void>;
+  createAuthGateway: (options: AuthenticationOptions) => AuthGateway;
   createDatabase: (databaseUrl: string) => RuntimeDatabase;
   createObservability: (options: ObservabilityOptions) => Observability;
+  createOrganizationRepository: (database: RuntimeDatabase["db"]) => OrganizationRepository;
   parseServerConfig: () => ServerConfig;
   startServer: (options: StartServerOptions) => ServerRuntime;
 }>;
 
 const defaultDependencies: BootstrapDependencies = {
   checkDatabaseHealth,
+  createAuthGateway: (options) => createAuthGateway(createAuthentication(options)),
   createDatabase,
   createObservability,
+  createOrganizationRepository: createDrizzleOrganizationRepository,
   parseServerConfig,
   startServer,
 };
@@ -41,9 +53,17 @@ export async function bootstrapServer(
   const database = dependencies.createDatabase(config.databaseUrl);
 
   try {
+    const auth = dependencies.createAuthGateway({
+      baseUrl: config.authBaseUrl,
+      database: database.db,
+      secret: config.authSecret,
+    });
+    const organizationRepository = dependencies.createOrganizationRepository(database.db);
     const app = createApp({
+      auth,
       checkDatabaseHealth: () => dependencies.checkDatabaseHealth(database.client),
       observability,
+      organizationRepository,
     });
 
     return dependencies.startServer({

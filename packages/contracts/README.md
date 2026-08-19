@@ -6,6 +6,7 @@ Current boundaries:
 
 - stable public errors, health responses, request IDs, and cursor pagination;
 - immutable usage-event request and result shapes;
+- organization, membership, role, timezone, and tenant route shapes;
 - deterministic event-time checks through an injected clock;
 - explicit batch, payload-size, property-depth, and property-key limits.
 

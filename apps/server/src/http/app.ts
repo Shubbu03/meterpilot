@@ -4,19 +4,26 @@ import { Hono } from "hono";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 
+import type { AuthGateway } from "../features/identity/authentication";
+import type { OrganizationRepository } from "../features/organizations/repository";
+import { registerOrganizationRoutes } from "../features/organizations/routes";
+import type { AppEnvironment } from "./environment";
+
 const REQUEST_ID_MAX_LENGTH = 128;
 const SERVICE_NAME = "meterpilot-server";
 
 type HttpObservability = Pick<Observability, "logger" | "withSpan">;
 
 export type AppDependencies = Readonly<{
+  auth: AuthGateway;
   checkDatabaseHealth: () => Promise<void>;
   now?: () => number;
   observability: HttpObservability;
+  organizationRepository: OrganizationRepository;
 }>;
 
 export function createApp(dependencies: AppDependencies) {
-  const app = new Hono();
+  const app = new Hono<AppEnvironment>();
   const now = dependencies.now ?? (() => performance.now());
 
   app.use(
@@ -38,6 +45,12 @@ export function createApp(dependencies: AppDependencies) {
       requestId: context.get("requestId"),
       statusCode: context.res.status,
     });
+  });
+
+  app.all("/api/auth/*", (context) => dependencies.auth.handler(context.req.raw));
+  registerOrganizationRoutes(app, {
+    auth: dependencies.auth,
+    repository: dependencies.organizationRepository,
   });
 
   app.get("/", (context) => {

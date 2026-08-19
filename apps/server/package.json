@@ -11,10 +11,14 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.6.26",
+    "@hono/zod-validator": "0.9.0",
     "@meterpilot/config": "workspace:*",
     "@meterpilot/contracts": "workspace:*",
     "@meterpilot/db": "workspace:*",
     "@meterpilot/observability": "workspace:*",
+    "better-auth": "1.6.26",
+    "drizzle-orm": "1.0.0-rc.4",
     "hono": "4.13.1"
   }
 }

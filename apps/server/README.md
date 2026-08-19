@@ -10,6 +10,7 @@ From the repository root:
 
 ```bash
 cp -n apps/server/.env.example apps/server/.env
+openssl rand -base64 48
 bun run infra:up
 bun run --cwd apps/server dev
 ```

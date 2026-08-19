@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { createObservability } from "@meterpilot/observability";
 
+import type { AuthGateway } from "../src/features/identity/authentication";
 import { createApp } from "../src/http/app";
+import { createOrganizationRepositoryStub } from "./helpers";
 
 type LogEntry = Readonly<Record<string, unknown>>;
 
@@ -16,16 +18,30 @@ function createTestApp(options: Readonly<{ checkDatabaseHealth?: () => Promise<v
       logs.push(JSON.parse(line) as LogEntry);
     },
   });
+  const auth: AuthGateway = {
+    getSession: () => Promise.resolve(null),
+    handler: () => Promise.resolve(new Response("auth response")),
+  };
   const app = createApp({
+    auth,
     checkDatabaseHealth: options.checkDatabaseHealth ?? (() => Promise.resolve()),
     now: () => currentTime++,
     observability,
+    organizationRepository: createOrganizationRepositoryStub(),
   });
 
   return { app, logs };
 }
 
 describe("HTTP application", () => {
+  test("mounts the Better Auth handler at its canonical base path", async () => {
+    const { app } = createTestApp();
+    const response = await app.request("/api/auth/get-session");
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("auth response");
+  });
+
   test("reports combined service health after checking PostgreSQL", async () => {
     let healthChecks = 0;
     const { app } = createTestApp({
