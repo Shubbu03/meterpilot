@@ -1,11 +1,23 @@
+import type { HealthResponse } from "@meterpilot/contracts";
+import type { Observability } from "@meterpilot/observability";
 import { Hono } from "hono";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 
 const REQUEST_ID_MAX_LENGTH = 128;
+const SERVICE_NAME = "meterpilot-server";
 
-export function createApp() {
+type HttpObservability = Pick<Observability, "logger" | "withSpan">;
+
+export type AppDependencies = Readonly<{
+  checkDatabaseHealth: () => Promise<void>;
+  now?: () => number;
+  observability: HttpObservability;
+}>;
+
+export function createApp(dependencies: AppDependencies) {
   const app = new Hono();
+  const now = dependencies.now ?? (() => performance.now());
 
   app.use(
     "*",
@@ -14,16 +26,46 @@ export function createApp() {
     }),
   );
   app.use("*", secureHeaders());
+  app.use("*", async (context, next) => {
+    const startedAt = now();
+
+    await next();
+
+    dependencies.observability.logger.info("http_request_completed", {
+      durationMs: Math.max(0, now() - startedAt),
+      method: context.req.method,
+      path: context.req.path,
+      requestId: context.get("requestId"),
+      statusCode: context.res.status,
+    });
+  });
 
   app.get("/", (context) => {
     return context.text("MeterPilot API");
   });
 
-  app.get("/health", (context) => {
-    return context.json({
-      service: "meterpilot-server",
-      status: "ok",
-    });
+  app.get("/health", async (context) => {
+    try {
+      await dependencies.observability.withSpan(
+        "server.health.database",
+        dependencies.checkDatabaseHealth,
+        { "server.health.dependency": "postgresql" },
+      );
+
+      const response: HealthResponse = {
+        service: SERVICE_NAME,
+        status: "ok",
+      };
+      return context.json(response);
+    } catch (error) {
+      dependencies.observability.logger.warn("database_health_check_failed", { error });
+
+      const response: HealthResponse = {
+        service: SERVICE_NAME,
+        status: "degraded",
+      };
+      return context.json(response, 503);
+    }
   });
 
   app.notFound((context) => {
@@ -40,16 +82,12 @@ export function createApp() {
   });
 
   app.onError((error, context) => {
-    console.error(
-      JSON.stringify({
-        errorName: error.name,
-        event: "unhandled_request_error",
-        level: "error",
-        method: context.req.method,
-        path: context.req.path,
-        requestId: context.get("requestId"),
-      }),
-    );
+    dependencies.observability.logger.error("unhandled_request_error", {
+      error,
+      method: context.req.method,
+      path: context.req.path,
+      requestId: context.get("requestId"),
+    });
 
     return context.json(
       {
@@ -66,8 +104,4 @@ export function createApp() {
   return app;
 }
 
-const app = createApp();
-
-export type AppType = typeof app;
-
-export default app;
+export type AppType = ReturnType<typeof createApp>;

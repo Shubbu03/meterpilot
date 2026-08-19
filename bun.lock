@@ -14,6 +14,10 @@
       "name": "@meterpilot/server",
       "version": "0.0.0",
       "dependencies": {
+        "@meterpilot/config": "workspace:*",
+        "@meterpilot/contracts": "workspace:*",
+        "@meterpilot/db": "workspace:*",
+        "@meterpilot/observability": "workspace:*",
         "hono": "4.13.1",
       },
     },

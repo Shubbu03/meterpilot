@@ -11,6 +11,10 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@meterpilot/config": "workspace:*",
+    "@meterpilot/contracts": "workspace:*",
+    "@meterpilot/db": "workspace:*",
+    "@meterpilot/observability": "workspace:*",
     "hono": "4.13.1"
   }
 }
