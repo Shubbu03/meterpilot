@@ -1,0 +1,20 @@
+{
+  "name": "@meterpilot/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@meterpilot/config": "workspace:*",
+    "@meterpilot/db": "workspace:*",
+    "@meterpilot/observability": "workspace:*",
+    "drizzle-orm": "1.0.0-rc.4",
+    "zod": "4.4.3"
+  }
+}
