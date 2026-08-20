@@ -36,7 +36,26 @@ later. Supported scopes are `events:write`, `events:read`, and `usage:read`.
 
 The reusable Bearer authentication middleware resolves an API key to its organization and scopes,
 rejects revoked or expired keys, and atomically records `lastUsedAt`. Event routes will apply that
-middleware when the immutable event ledger is implemented in Phase 2.
+middleware when accepting or reading usage events.
+
+## Immutable event ledger
+
+Scoped API keys access the event API through:
+
+```text
+POST /v1/events              events:write
+POST /v1/events/batch        events:write
+GET  /v1/events/:eventKey    events:read
+```
+
+An ingestion response uses `202 Accepted` only after the immutable event and its processing job are
+committed in the same PostgreSQL transaction. Reusing an event ID with the same canonical payload
+returns `duplicate`; reusing it with different content returns `idempotency_conflict`. Batch inputs
+are validated independently so valid events can be accepted alongside stable rejection results.
+
+Event lookup is always derived from the authenticated key's organization. Responses expose the
+event's `pending`, `processing`, `processed`, or `failed` state without exposing internal job IDs,
+lease data, source credentials, or worker errors.
 
 ## Commands
 

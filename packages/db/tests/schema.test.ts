@@ -7,10 +7,14 @@ import {
   apiKeys,
   auditActorType,
   auditLog,
+  jobs,
+  jobStatus,
   membershipRole,
   memberships,
   organizations,
   sessions,
+  usageEventCorrectionKind,
+  usageEvents,
   users,
   verifications,
 } from "../src/schema";
@@ -19,7 +23,7 @@ function columnNames(table: PgTable): string[] {
   return getTableConfig(table).columns.map((column) => column.name);
 }
 
-describe("Phase 1 database schema", () => {
+describe("database schema", () => {
   test("defines the Better Auth core schema with UUID identifiers", () => {
     expect(columnNames(users)).toEqual([
       "id",
@@ -109,6 +113,83 @@ describe("Phase 1 database schema", () => {
     );
   });
 
+  test("defines an immutable tenant-owned usage ledger", () => {
+    const eventConfig = getTableConfig(usageEvents);
+
+    expect(columnNames(usageEvents)).toEqual([
+      "id",
+      "organization_id",
+      "event_key",
+      "payload_hash",
+      "event_type",
+      "subject_key",
+      "occurred_at",
+      "received_at",
+      "properties",
+      "source",
+      "source_api_key_id",
+      "correction_of_event_id",
+      "correction_kind",
+    ]);
+    expect(usageEventCorrectionKind.enumValues).toEqual(["reverse", "replace"]);
+    expect(eventConfig.uniqueConstraints.map((constraint) => constraint.getName())).toContain(
+      "usage_events_organization_id_event_key_unique",
+    );
+    const eventForeignKeys = eventConfig.foreignKeys.map((key) => key.getName());
+    for (const foreignKey of [
+      "usage_events_organization_source_api_key_fk",
+      "usage_events_organization_correction_event_fk",
+    ]) {
+      expect(eventForeignKeys).toContain(foreignKey);
+    }
+    const eventChecks = eventConfig.checks.map((constraint) => constraint.name);
+    for (const constraint of [
+      "usage_events_event_key_format_check",
+      "usage_events_event_type_format_check",
+      "usage_events_subject_key_format_check",
+      "usage_events_payload_hash_format_check",
+      "usage_events_source_check",
+      "usage_events_correction_shape_check",
+    ]) {
+      expect(eventChecks).toContain(constraint);
+    }
+  });
+
+  test("defines durable lease-based event processing jobs", () => {
+    const jobConfig = getTableConfig(jobs);
+
+    expect(jobStatus.enumValues).toEqual(["pending", "processing", "completed", "failed"]);
+    const jobColumns = columnNames(jobs);
+    for (const column of [
+      "event_id",
+      "resource_type",
+      "resource_id",
+      "attempt_count",
+      "lease_owner",
+      "lease_expires_at",
+      "next_attempt_at",
+      "last_error",
+    ]) {
+      expect(jobColumns).toContain(column);
+    }
+    expect(jobConfig.uniqueConstraints.map((constraint) => constraint.getName())).toContain(
+      "jobs_organization_type_resource_unique",
+    );
+    expect(jobConfig.foreignKeys.map((key) => key.getName())).toContain(
+      "jobs_organization_event_fk",
+    );
+    const jobChecks = jobConfig.checks.map((constraint) => constraint.name);
+    for (const constraint of [
+      "jobs_type_not_empty_check",
+      "jobs_resource_not_empty_check",
+      "jobs_event_reference_shape_check",
+      "jobs_attempt_count_check",
+      "jobs_lease_shape_check",
+    ]) {
+      expect(jobChecks).toContain(constraint);
+    }
+  });
+
   test("keeps the generated migration aligned with the declared schema", async () => {
     const migration = await Bun.file(
       new URL("../migrations/20260819090002_oval_purifiers/migration.sql", import.meta.url),
@@ -141,5 +222,18 @@ describe("Phase 1 database schema", () => {
     for (const scope of API_KEY_SCOPES) {
       expect(apiKeyScopeMigration).toContain(`'${scope}'`);
     }
+
+    const eventLedgerMigration = await Bun.file(
+      new URL("../migrations/20260820042817_lethal_tiger_shark/migration.sql", import.meta.url),
+    ).text();
+
+    for (const table of ["usage_events", "jobs"]) {
+      expect(eventLedgerMigration).toContain(`CREATE TABLE "${table}"`);
+    }
+    expect(eventLedgerMigration).toContain(
+      'CONSTRAINT "usage_events_organization_id_event_key_unique"',
+    );
+    expect(eventLedgerMigration).toContain('CONSTRAINT "jobs_organization_type_resource_unique"');
+    expect(eventLedgerMigration).toContain('CONSTRAINT "jobs_organization_event_fk"');
   });
 });

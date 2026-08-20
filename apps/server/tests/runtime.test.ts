@@ -10,7 +10,11 @@ import {
   type ShutdownSignalSource,
   startServer,
 } from "../src/runtime/server";
-import { createApiKeyServiceStub, createOrganizationRepositoryStub } from "./helpers";
+import {
+  createApiKeyServiceStub,
+  createEventServiceStub,
+  createOrganizationRepositoryStub,
+} from "./helpers";
 
 type LogEntry = Readonly<Record<string, unknown>>;
 
@@ -193,6 +197,7 @@ describe("server bootstrap", () => {
         close: () => Promise.resolve(),
         db: {} as never,
       }),
+      createEventService: () => createEventServiceStub(),
       createObservability: () => observability,
       createOrganizationRepository: () => createOrganizationRepositoryStub(),
       parseServerConfig: () => testConfig,
@@ -241,6 +246,7 @@ describe("server bootstrap", () => {
         },
         db: {} as never,
       }),
+      createEventService: () => createEventServiceStub(),
       createObservability: () => observability,
       createOrganizationRepository: () => createOrganizationRepositoryStub(),
       parseServerConfig: () => testConfig,

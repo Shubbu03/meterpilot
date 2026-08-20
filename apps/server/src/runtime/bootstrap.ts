@@ -8,6 +8,8 @@ import {
 
 import { createDrizzleApiKeyRepository } from "../features/api-keys/drizzle-repository";
 import { createApiKeyService, type ApiKeyService } from "../features/api-keys/service";
+import { createDrizzleEventRepository } from "../features/events/drizzle-repository";
+import { createEventService, type EventService } from "../features/events/service";
 import {
   createAuthentication,
   createAuthGateway,
@@ -28,6 +30,7 @@ export type BootstrapDependencies = Readonly<{
   createAuthGateway: (options: AuthenticationOptions) => AuthGateway;
   createApiKeyService: (database: RuntimeDatabase["db"]) => ApiKeyService;
   createDatabase: (databaseUrl: string) => RuntimeDatabase;
+  createEventService: (database: RuntimeDatabase["db"]) => EventService;
   createObservability: (options: ObservabilityOptions) => Observability;
   createOrganizationRepository: (database: RuntimeDatabase["db"]) => OrganizationRepository;
   parseServerConfig: () => ServerConfig;
@@ -39,6 +42,7 @@ const defaultDependencies: BootstrapDependencies = {
   createApiKeyService: (database) => createApiKeyService(createDrizzleApiKeyRepository(database)),
   createAuthGateway: (options) => createAuthGateway(createAuthentication(options)),
   createDatabase,
+  createEventService: (database) => createEventService(createDrizzleEventRepository(database)),
   createObservability,
   createOrganizationRepository: createDrizzleOrganizationRepository,
   parseServerConfig,
@@ -58,6 +62,7 @@ export async function bootstrapServer(
 
   try {
     const apiKeyService = dependencies.createApiKeyService(database.db);
+    const eventService = dependencies.createEventService(database.db);
     const auth = dependencies.createAuthGateway({
       baseUrl: config.authBaseUrl,
       database: database.db,
@@ -68,6 +73,7 @@ export async function bootstrapServer(
       apiKeyService,
       auth,
       checkDatabaseHealth: () => dependencies.checkDatabaseHealth(database.client),
+      eventService,
       observability,
       organizationRepository,
     });

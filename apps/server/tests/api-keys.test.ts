@@ -9,7 +9,11 @@ import { createObservability } from "@meterpilot/observability";
 import type { ApiKeyService } from "../src/features/api-keys/service";
 import type { AuthGateway } from "../src/features/identity/authentication";
 import { createApp } from "../src/http/app";
-import { createApiKeyServiceStub, createOrganizationRepositoryStub } from "./helpers";
+import {
+  createApiKeyServiceStub,
+  createEventServiceStub,
+  createOrganizationRepositoryStub,
+} from "./helpers";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const ORGANIZATION_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -53,6 +57,7 @@ function createApiKeyTestApp(service: ApiKeyService, role: OrganizationMembershi
     apiKeyService: service,
     auth,
     checkDatabaseHealth: () => Promise.resolve(),
+    eventService: createEventServiceStub(),
     observability: createObservability({
       environment: "test",
       level: "error",

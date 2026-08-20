@@ -5,7 +5,11 @@ import { createObservability } from "@meterpilot/observability";
 import type { AuthGateway } from "../src/features/identity/authentication";
 import type { TenantAuthorization } from "../src/features/organizations/repository";
 import { createApp } from "../src/http/app";
-import { createApiKeyServiceStub, createOrganizationRepositoryStub } from "./helpers";
+import {
+  createApiKeyServiceStub,
+  createEventServiceStub,
+  createOrganizationRepositoryStub,
+} from "./helpers";
 
 const USER_A_ID = "11111111-1111-4111-8111-111111111111";
 const USER_B_ID = "22222222-2222-4222-8222-222222222222";
@@ -86,6 +90,7 @@ function createIsolationApp(authenticatedUserId: string | null) {
     }),
     auth,
     checkDatabaseHealth: () => Promise.resolve(),
+    eventService: createEventServiceStub(),
     observability: createObservability({
       environment: "test",
       level: "error",

@@ -25,6 +25,7 @@ export const publicErrorCodeSchema = z.enum([
   "forbidden",
   "internal_error",
   "not_found",
+  "payload_too_large",
   "rate_limited",
   "route_not_found",
   "service_unavailable",

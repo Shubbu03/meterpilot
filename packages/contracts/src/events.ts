@@ -4,6 +4,9 @@ import { requestIdSchema } from "./common";
 
 export const MAX_EVENT_BATCH_SIZE = 500;
 export const MAX_EVENT_SIZE_BYTES = 64 * 1024;
+export const MAX_EVENT_SINGLE_BODY_SIZE_BYTES = MAX_EVENT_SIZE_BYTES + 4 * 1024;
+export const MAX_EVENT_BATCH_BODY_SIZE_BYTES =
+  MAX_EVENT_BATCH_SIZE * MAX_EVENT_SIZE_BYTES + 1024 * 1024;
 export const MAX_EVENT_PROPERTY_DEPTH = 5;
 export const MAX_EVENT_PROPERTY_KEYS = 100;
 export const MAX_EVENT_FUTURE_SKEW_MS = 5 * 60 * 1000;
@@ -18,6 +21,10 @@ export const eventIdSchema = z
   .min(1)
   .max(128)
   .regex(SAFE_EXTERNAL_KEY_PATTERN, "must contain only safe identifier characters");
+
+export const eventParamSchema = z.strictObject({
+  eventKey: eventIdSchema,
+});
 
 export const eventTypeSchema = z
   .string()
@@ -174,6 +181,27 @@ export function createUsageEventBatchSchema(options: EventTimeValidationOptions)
   });
 }
 
+export const usageEventBatchEnvelopeSchema = z.strictObject({
+  events: z.array(z.unknown()).min(1).max(MAX_EVENT_BATCH_SIZE),
+});
+
+export const eventProcessingStateSchema = z.enum(["pending", "processing", "processed", "failed"]);
+
+export const storedUsageEventSchema = z.strictObject({
+  id: eventIdSchema,
+  occurredAt: z.iso.datetime({ offset: true }),
+  processingState: eventProcessingStateSchema,
+  properties: eventPropertiesSchema,
+  receivedAt: z.iso.datetime({ offset: true }),
+  subject: subjectKeySchema,
+  type: eventTypeSchema,
+});
+
+export const usageEventResponseSchema = z.strictObject({
+  event: storedUsageEventSchema,
+  requestId: requestIdSchema,
+});
+
 const acceptedEventResultSchema = z.strictObject({
   id: eventIdSchema,
   status: z.literal("accepted"),
@@ -210,3 +238,5 @@ export const eventIngestionResponseSchema = z.strictObject({
 
 export type EventIngestionResult = z.infer<typeof eventIngestionResultSchema>;
 export type EventIngestionResponse = z.infer<typeof eventIngestionResponseSchema>;
+export type EventProcessingState = z.infer<typeof eventProcessingStateSchema>;
+export type StoredUsageEvent = z.infer<typeof storedUsageEventSchema>;

@@ -22,3 +22,8 @@ bun run db:migrate
 
 The root scripts execute Drizzle with `packages/db` as its working directory, and the package
 `db:migrate` explicitly loads `packages/db/.env`. No repository-level environment file is used.
+
+The event ledger stores tenant-qualified immutable payloads and canonical hashes. Every newly
+accepted event is paired with one durable processing job by the server's Drizzle repository in a
+single transaction. Job rows include lease state, attempts, retry timing, and inspectable failure
+state for the worker phase.

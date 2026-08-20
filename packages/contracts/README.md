@@ -5,7 +5,7 @@ Runtime-validated HTTP contracts shared by the API, dashboard, and TypeScript SD
 Current boundaries:
 
 - stable public errors, health responses, request IDs, and cursor pagination;
-- immutable usage-event request and result shapes;
+- immutable usage-event request, ingestion result, body-limit, and processing-state shapes;
 - organization, membership, role, timezone, and tenant route shapes;
 - scoped API key records, one-time reveal responses, and create-request validation;
 - deterministic event-time checks through an injected clock;

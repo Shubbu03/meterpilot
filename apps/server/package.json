@@ -16,6 +16,7 @@
     "@meterpilot/config": "workspace:*",
     "@meterpilot/contracts": "workspace:*",
     "@meterpilot/db": "workspace:*",
+    "@meterpilot/domain": "workspace:*",
     "@meterpilot/observability": "workspace:*",
     "better-auth": "1.6.26",
     "drizzle-orm": "1.0.0-rc.4",

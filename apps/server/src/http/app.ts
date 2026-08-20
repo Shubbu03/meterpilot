@@ -7,6 +7,8 @@ import { secureHeaders } from "hono/secure-headers";
 import type { AuthGateway } from "../features/identity/authentication";
 import type { ApiKeyService } from "../features/api-keys/service";
 import { registerApiKeyRoutes } from "../features/api-keys/routes";
+import type { EventService } from "../features/events/service";
+import { registerEventRoutes } from "../features/events/routes";
 import type { OrganizationRepository } from "../features/organizations/repository";
 import { registerOrganizationRoutes } from "../features/organizations/routes";
 import type { AppEnvironment } from "./environment";
@@ -20,6 +22,7 @@ export type AppDependencies = Readonly<{
   apiKeyService: ApiKeyService;
   auth: AuthGateway;
   checkDatabaseHealth: () => Promise<void>;
+  eventService: EventService;
   now?: () => number;
   observability: HttpObservability;
   organizationRepository: OrganizationRepository;
@@ -59,6 +62,10 @@ export function createApp(dependencies: AppDependencies) {
     auth: dependencies.auth,
     organizationRepository: dependencies.organizationRepository,
     service: dependencies.apiKeyService,
+  });
+  registerEventRoutes(app, {
+    apiKeyService: dependencies.apiKeyService,
+    eventService: dependencies.eventService,
   });
 
   app.get("/", (context) => {

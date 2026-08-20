@@ -3,7 +3,11 @@ import { createObservability } from "@meterpilot/observability";
 
 import type { AuthGateway } from "../src/features/identity/authentication";
 import { createApp } from "../src/http/app";
-import { createApiKeyServiceStub, createOrganizationRepositoryStub } from "./helpers";
+import {
+  createApiKeyServiceStub,
+  createEventServiceStub,
+  createOrganizationRepositoryStub,
+} from "./helpers";
 
 type LogEntry = Readonly<Record<string, unknown>>;
 
@@ -26,6 +30,7 @@ function createTestApp(options: Readonly<{ checkDatabaseHealth?: () => Promise<v
     apiKeyService: createApiKeyServiceStub(),
     auth,
     checkDatabaseHealth: options.checkDatabaseHealth ?? (() => Promise.resolve()),
+    eventService: createEventServiceStub(),
     now: () => currentTime++,
     observability,
     organizationRepository: createOrganizationRepositoryStub(),

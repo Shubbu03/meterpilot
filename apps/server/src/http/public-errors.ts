@@ -1,7 +1,7 @@
 import type { PublicErrorCode, PublicValidationIssue } from "@meterpilot/contracts";
 import type { Context, Env } from "hono";
 
-type PublicErrorStatus = 400 | 401 | 403 | 404 | 409;
+type PublicErrorStatus = 400 | 401 | 403 | 404 | 409 | 413;
 
 export function publicError<TEnvironment extends Env>(
   context: Context<TEnvironment>,

@@ -5,7 +5,9 @@ import {
   createUsageEventSchema,
   decimalStringSchema,
   eventIngestionResponseSchema,
+  storedUsageEventSchema,
   MAX_EVENT_BATCH_SIZE,
+  usageEventBatchEnvelopeSchema,
   usageEventSchema,
 } from "../src/events";
 
@@ -76,6 +78,7 @@ describe("usage event contracts", () => {
     }));
 
     expect(schema.safeParse({ events }).success).toBeFalse();
+    expect(usageEventBatchEnvelopeSchema.safeParse({ events }).success).toBeFalse();
   });
 
   test("models accepted, duplicate, conflict, and rejected results", () => {
@@ -97,5 +100,27 @@ describe("usage event contracts", () => {
         })
         .results.map((result) => result.status),
     ).toEqual(["accepted", "duplicate", "idempotency_conflict", "rejected"]);
+  });
+
+  test("models persisted event processing state without internal job fields", () => {
+    expect(
+      storedUsageEventSchema.parse({
+        ...validEvent,
+        processingState: "pending",
+        receivedAt: NOW.toISOString(),
+      }),
+    ).toEqual({
+      ...validEvent,
+      processingState: "pending",
+      receivedAt: NOW.toISOString(),
+    });
+    expect(
+      storedUsageEventSchema.safeParse({
+        ...validEvent,
+        jobId: "internal",
+        processingState: "pending",
+        receivedAt: NOW.toISOString(),
+      }).success,
+    ).toBeFalse();
   });
 });

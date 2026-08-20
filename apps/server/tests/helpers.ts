@@ -1,6 +1,8 @@
 import type { OrganizationRepository } from "../src/features/organizations/repository";
 import type { ApiKeyService } from "../src/features/api-keys/service";
 import type { ApiKeyRepository } from "../src/features/api-keys/repository";
+import type { EventRepository } from "../src/features/events/repository";
+import type { EventService } from "../src/features/events/service";
 
 export function createApiKeyRepositoryStub(
   overrides: Partial<ApiKeyRepository> = {},
@@ -23,6 +25,25 @@ export function createApiKeyServiceStub(overrides: Partial<ApiKeyService> = {}):
     list: () => Promise.resolve({ status: "forbidden" }),
     revoke: () => Promise.resolve({ status: "forbidden" }),
     rotate: () => Promise.resolve({ status: "forbidden" }),
+    ...overrides,
+  };
+}
+
+export function createEventRepositoryStub(
+  overrides: Partial<EventRepository> = {},
+): EventRepository {
+  return {
+    find: () => Promise.resolve(null),
+    ingest: () => Promise.resolve([]),
+    ...overrides,
+  };
+}
+
+export function createEventServiceStub(overrides: Partial<EventService> = {}): EventService {
+  return {
+    find: () => Promise.resolve(null),
+    ingestBatch: (_principal, _inputs, requestId) => Promise.resolve({ requestId, results: [] }),
+    ingestOne: (_principal, _input, requestId) => Promise.resolve({ requestId, results: [] }),
     ...overrides,
   };
 }

@@ -8,7 +8,11 @@ import { createObservability } from "@meterpilot/observability";
 import type { AuthGateway } from "../src/features/identity/authentication";
 import type { OrganizationRepository } from "../src/features/organizations/repository";
 import { createApp } from "../src/http/app";
-import { createApiKeyServiceStub, createOrganizationRepositoryStub } from "./helpers";
+import {
+  createApiKeyServiceStub,
+  createEventServiceStub,
+  createOrganizationRepositoryStub,
+} from "./helpers";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const ORGANIZATION_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -49,6 +53,7 @@ function createOrganizationTestApp(repository: OrganizationRepository) {
     apiKeyService: createApiKeyServiceStub(),
     auth,
     checkDatabaseHealth: () => Promise.resolve(),
+    eventService: createEventServiceStub(),
     observability: createObservability({
       environment: "test",
       level: "error",
