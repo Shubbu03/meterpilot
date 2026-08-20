@@ -25,6 +25,10 @@ export const ORGANIZATION_MEMBERSHIP_ROLES = [
 
 export type OrganizationMembershipRole = (typeof ORGANIZATION_MEMBERSHIP_ROLES)[number];
 
+export const API_KEY_SCOPES = ["events:write", "events:read", "usage:read"] as const;
+
+export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
+
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 const IDENTIFIER_MAX_LENGTH = 128;
 

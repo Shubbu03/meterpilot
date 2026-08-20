@@ -5,6 +5,8 @@ import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 
 import type { AuthGateway } from "../features/identity/authentication";
+import type { ApiKeyService } from "../features/api-keys/service";
+import { registerApiKeyRoutes } from "../features/api-keys/routes";
 import type { OrganizationRepository } from "../features/organizations/repository";
 import { registerOrganizationRoutes } from "../features/organizations/routes";
 import type { AppEnvironment } from "./environment";
@@ -15,6 +17,7 @@ const SERVICE_NAME = "meterpilot-server";
 type HttpObservability = Pick<Observability, "logger" | "withSpan">;
 
 export type AppDependencies = Readonly<{
+  apiKeyService: ApiKeyService;
   auth: AuthGateway;
   checkDatabaseHealth: () => Promise<void>;
   now?: () => number;
@@ -51,6 +54,11 @@ export function createApp(dependencies: AppDependencies) {
   registerOrganizationRoutes(app, {
     auth: dependencies.auth,
     repository: dependencies.organizationRepository,
+  });
+  registerApiKeyRoutes(app, {
+    auth: dependencies.auth,
+    organizationRepository: dependencies.organizationRepository,
+    service: dependencies.apiKeyService,
   });
 
   app.get("/", (context) => {

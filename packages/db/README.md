@@ -22,5 +22,3 @@ bun run db:migrate
 
 The root scripts execute Drizzle with `packages/db` as its working directory, and the package
 `db:migrate` explicitly loads `packages/db/.env`. No repository-level environment file is used.
-
-`db:generate` creates migration files from the declared schema. `db:migrate` is the only command here that changes a database.

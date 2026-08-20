@@ -6,6 +6,8 @@ import {
   type ObservabilityOptions,
 } from "@meterpilot/observability";
 
+import { createDrizzleApiKeyRepository } from "../features/api-keys/drizzle-repository";
+import { createApiKeyService, type ApiKeyService } from "../features/api-keys/service";
 import {
   createAuthentication,
   createAuthGateway,
@@ -24,6 +26,7 @@ type RuntimeDatabase = Pick<Database, "client" | "close" | "db">;
 export type BootstrapDependencies = Readonly<{
   checkDatabaseHealth: (client: RuntimeDatabase["client"]) => Promise<void>;
   createAuthGateway: (options: AuthenticationOptions) => AuthGateway;
+  createApiKeyService: (database: RuntimeDatabase["db"]) => ApiKeyService;
   createDatabase: (databaseUrl: string) => RuntimeDatabase;
   createObservability: (options: ObservabilityOptions) => Observability;
   createOrganizationRepository: (database: RuntimeDatabase["db"]) => OrganizationRepository;
@@ -33,6 +36,7 @@ export type BootstrapDependencies = Readonly<{
 
 const defaultDependencies: BootstrapDependencies = {
   checkDatabaseHealth,
+  createApiKeyService: (database) => createApiKeyService(createDrizzleApiKeyRepository(database)),
   createAuthGateway: (options) => createAuthGateway(createAuthentication(options)),
   createDatabase,
   createObservability,
@@ -53,6 +57,7 @@ export async function bootstrapServer(
   const database = dependencies.createDatabase(config.databaseUrl);
 
   try {
+    const apiKeyService = dependencies.createApiKeyService(database.db);
     const auth = dependencies.createAuthGateway({
       baseUrl: config.authBaseUrl,
       database: database.db,
@@ -60,6 +65,7 @@ export async function bootstrapServer(
     });
     const organizationRepository = dependencies.createOrganizationRepository(database.db);
     const app = createApp({
+      apiKeyService,
       auth,
       checkDatabaseHealth: () => dependencies.checkDatabaseHealth(database.client),
       observability,

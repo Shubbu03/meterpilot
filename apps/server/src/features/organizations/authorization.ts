@@ -43,3 +43,7 @@ export function canRemoveMembership(
 
   return actorRole === "admin" && ADMIN_MANAGEABLE_ROLES.has(targetRole);
 }
+
+export function canManageApiKeys(role: OrganizationMembershipRole): boolean {
+  return role === "owner" || role === "admin";
+}

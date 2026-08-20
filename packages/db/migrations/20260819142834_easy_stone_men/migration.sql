@@ -1,0 +1,1 @@
+ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_scopes_allowed_check" CHECK ("scopes" <@ ARRAY['events:write', 'events:read', 'usage:read']::text[]);

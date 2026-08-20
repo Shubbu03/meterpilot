@@ -5,16 +5,18 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./api-keys": "./src/api-keys.ts",
     "./common": "./src/common.ts",
     "./events": "./src/events.ts",
     "./organizations": "./src/organizations.ts"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/common.ts src/events.ts src/organizations.ts --outdir dist --target browser --packages external",
+    "build": "bun build src/index.ts src/api-keys.ts src/common.ts src/events.ts src/organizations.ts --outdir dist --target browser --packages external",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@meterpilot/domain": "workspace:*",
     "zod": "4.4.3"
   }
 }

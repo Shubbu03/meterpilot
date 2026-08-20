@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  API_KEY_SCOPES,
   customerId,
   ORGANIZATION_MEMBERSHIP_ROLES,
   type OrganizationMembershipRole,
@@ -32,5 +33,9 @@ describe("tenant identity", () => {
       "analyst",
       "support",
     ]);
+  });
+
+  test("defines the bounded API key permission set", () => {
+    expect(API_KEY_SCOPES).toEqual(["events:write", "events:read", "usage:read"]);
   });
 });

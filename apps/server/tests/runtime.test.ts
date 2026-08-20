@@ -10,7 +10,7 @@ import {
   type ShutdownSignalSource,
   startServer,
 } from "../src/runtime/server";
-import { createOrganizationRepositoryStub } from "./helpers";
+import { createApiKeyServiceStub, createOrganizationRepositoryStub } from "./helpers";
 
 type LogEntry = Readonly<Record<string, unknown>>;
 
@@ -186,6 +186,7 @@ describe("server bootstrap", () => {
         checkedClient = client;
         return Promise.resolve();
       },
+      createApiKeyService: () => createApiKeyServiceStub(),
       createAuthGateway: () => auth,
       createDatabase: () => ({
         client: databaseClient,
@@ -227,6 +228,7 @@ describe("server bootstrap", () => {
     };
     const dependencies: BootstrapDependencies = {
       checkDatabaseHealth: () => Promise.resolve(),
+      createApiKeyService: () => createApiKeyServiceStub(),
       createAuthGateway: () => ({
         getSession: () => Promise.resolve(null),
         handler: () => Promise.resolve(new Response("auth response")),

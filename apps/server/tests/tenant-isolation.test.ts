@@ -5,7 +5,7 @@ import { createObservability } from "@meterpilot/observability";
 import type { AuthGateway } from "../src/features/identity/authentication";
 import type { TenantAuthorization } from "../src/features/organizations/repository";
 import { createApp } from "../src/http/app";
-import { createOrganizationRepositoryStub } from "./helpers";
+import { createApiKeyServiceStub, createOrganizationRepositoryStub } from "./helpers";
 
 const USER_A_ID = "11111111-1111-4111-8111-111111111111";
 const USER_B_ID = "22222222-2222-4222-8222-222222222222";
@@ -47,6 +47,7 @@ const tenantB: TenantAuthorization = {
 };
 
 function createIsolationApp(authenticatedUserId: string | null) {
+  let apiKeyListReads = 0;
   let memberListReads = 0;
   const tenants = new Map([
     [`${USER_A_ID}:${ORGANIZATION_A_ID}`, tenantA],
@@ -74,6 +75,15 @@ function createIsolationApp(authenticatedUserId: string | null) {
       Promise.resolve(tenants.get(`${actorUserId}:${organizationId}`) ?? null),
   });
   const app = createApp({
+    apiKeyService: createApiKeyServiceStub({
+      list: () => {
+        apiKeyListReads++;
+        return Promise.resolve({
+          page: { items: [], nextCursor: null },
+          status: "ok",
+        });
+      },
+    }),
     auth,
     checkDatabaseHealth: () => Promise.resolve(),
     observability: createObservability({
@@ -85,7 +95,11 @@ function createIsolationApp(authenticatedUserId: string | null) {
     organizationRepository: repository,
   });
 
-  return { app, memberListReads: () => memberListReads };
+  return {
+    apiKeyListReads: () => apiKeyListReads,
+    app,
+    memberListReads: () => memberListReads,
+  };
 }
 
 describe("tenant isolation", () => {
@@ -125,6 +139,19 @@ describe("tenant isolation", () => {
         requestId: "request_cross_org",
       },
     });
+  });
+
+  test("does not query API keys before cross-tenant authorization succeeds", async () => {
+    const { apiKeyListReads, app } = createIsolationApp(USER_A_ID);
+    const response = await app.request(`/v1/organizations/${ORGANIZATION_B_ID}/api-keys`, {
+      headers: { "X-Request-Id": "request_cross_org_keys" },
+    });
+    const body = await response.text();
+
+    expect(response.status).toBe(403);
+    expect(apiKeyListReads()).toBe(0);
+    expect(body).not.toContain(ORGANIZATION_B_ID);
+    expect(body).not.toContain("organization-b");
   });
 
   test("validates the tenant identifier before repository access", async () => {

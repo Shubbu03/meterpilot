@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { API_KEY_SCOPES } from "@meterpilot/domain/identity";
 import { getTableConfig, type PgTable } from "drizzle-orm/pg-core";
 
 import {
@@ -88,10 +89,12 @@ describe("Phase 1 database schema", () => {
       "api_keys_prefix_format_check",
       "api_keys_secret_hash_length_check",
       "api_keys_scopes_not_empty_check",
+      "api_keys_scopes_allowed_check",
       "api_keys_last_used_at_check",
       "api_keys_expires_at_check",
       "api_keys_revoked_at_check",
     ]);
+    expect(API_KEY_SCOPES).toEqual(["events:write", "events:read", "usage:read"]);
   });
 
   test("binds audit actors to the correct organization-owned credential", () => {
@@ -129,5 +132,14 @@ describe("Phase 1 database schema", () => {
       'CONSTRAINT "memberships_organization_id_user_id_pk" PRIMARY KEY("organization_id","user_id")',
     );
     expect(migration).toContain('CONSTRAINT "audit_log_actor_shape_check"');
+
+    const apiKeyScopeMigration = await Bun.file(
+      new URL("../migrations/20260819142834_easy_stone_men/migration.sql", import.meta.url),
+    ).text();
+
+    expect(apiKeyScopeMigration).toContain('CONSTRAINT "api_keys_scopes_allowed_check"');
+    for (const scope of API_KEY_SCOPES) {
+      expect(apiKeyScopeMigration).toContain(`'${scope}'`);
+    }
   });
 });

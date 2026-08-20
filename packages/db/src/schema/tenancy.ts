@@ -1,4 +1,4 @@
-import { ORGANIZATION_MEMBERSHIP_ROLES } from "@meterpilot/domain/identity";
+import { API_KEY_SCOPES, ORGANIZATION_MEMBERSHIP_ROLES } from "@meterpilot/domain/identity";
 import { sql } from "drizzle-orm";
 import {
   check,
@@ -16,6 +16,10 @@ import {
 import { users } from "./auth";
 
 const timestampColumn = (name: string) => timestamp(name, { mode: "date", withTimezone: true });
+const apiKeyScopeSql = sql.join(
+  API_KEY_SCOPES.map((scope) => sql`${scope}`),
+  sql`, `,
+);
 
 export const membershipRole = pgEnum("membership_role", ORGANIZATION_MEMBERSHIP_ROLES);
 
@@ -86,6 +90,10 @@ export const apiKeys = pgTable(
     check(
       "api_keys_scopes_not_empty_check",
       sql`cardinality(${table.scopes}) > 0 and array_position(${table.scopes}, null) is null and array_position(${table.scopes}, '') is null`,
+    ),
+    check(
+      "api_keys_scopes_allowed_check",
+      sql`${table.scopes} <@ ARRAY[${apiKeyScopeSql}]::text[]`,
     ),
     check(
       "api_keys_last_used_at_check",

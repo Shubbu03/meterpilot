@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   canAssignMembershipRole,
   canChangeMembershipRole,
+  canManageApiKeys,
   canRemoveMembership,
 } from "../src/features/organizations/authorization";
 
@@ -26,5 +27,13 @@ describe("organization membership authorization", () => {
     expect(canAssignMembershipRole("developer", "support")).toBe(false);
     expect(canChangeMembershipRole("analyst", "support", "developer")).toBe(false);
     expect(canRemoveMembership("support", "support")).toBe(false);
+  });
+
+  test("limits API key management to owners and administrators", () => {
+    expect(canManageApiKeys("owner")).toBe(true);
+    expect(canManageApiKeys("admin")).toBe(true);
+    expect(canManageApiKeys("developer")).toBe(false);
+    expect(canManageApiKeys("analyst")).toBe(false);
+    expect(canManageApiKeys("support")).toBe(false);
   });
 });
