@@ -1,7 +1,13 @@
 import type { Counter, Gauge, Histogram, Meter } from "@opentelemetry/api";
 
 export type EventOutcome = "accepted" | "conflicted" | "duplicated" | "rejected";
-export type ReservationOutcome = "committed" | "conflict" | "expired" | "over_limit" | "released";
+export type ReservationOutcome =
+  | "committed"
+  | "conflict"
+  | "expired"
+  | "over_limit"
+  | "released"
+  | "reserved";
 export type DatabaseContentionOutcome = "deadlock" | "retry";
 export type FailedOperation = "export" | "preview";
 
@@ -18,6 +24,7 @@ export type MeterPilotMetrics = Readonly<{
   recordJobQueue: (depth: number, oldestAgeMs: number) => void;
   recordLateUsage: (kind: "adjustment" | "late_event", count?: number) => void;
   recordReconciliationDrift: (count: number, magnitude: number) => void;
+  recordRetention: (count: number) => void;
   recordReservation: (outcome: ReservationOutcome, durationMs: number) => void;
   recordSimulation: (queueMs: number, computeMs: number) => void;
 }>;
@@ -38,6 +45,7 @@ type Instruments = Readonly<{
   oldestJobAge: Gauge;
   reconciliationDriftCount: Counter;
   reconciliationDriftMagnitude: Histogram;
+  retentionRedacted: Counter;
   reservationDuration: Histogram;
   reservations: Counter;
   simulationComputeDuration: Histogram;
@@ -127,6 +135,10 @@ function createInstruments(meter: Meter): Instruments {
         unit: "1",
       },
     ),
+    retentionRedacted: meter.createCounter("meterpilot.retention.properties_redacted", {
+      description: "Raw usage-event property objects removed by retention enforcement.",
+      unit: "{event}",
+    }),
     reservationDuration: meter.createHistogram("meterpilot.reservation.duration", {
       description: "Quota reservation operation duration.",
       unit: "s",
@@ -193,6 +205,9 @@ export function createMeterPilotMetrics(meter: Meter): MeterPilotMetrics {
     recordReconciliationDrift(value, magnitude) {
       instruments.reconciliationDriftCount.add(count(value, "count"));
       instruments.reconciliationDriftMagnitude.record(nonNegative(magnitude, "magnitude"));
+    },
+    recordRetention(value) {
+      instruments.retentionRedacted.add(count(value, "count"));
     },
     recordReservation(outcome, durationMs) {
       instruments.reservations.add(1, { outcome });
