@@ -7,12 +7,11 @@ export type DomainErrorCode =
   | "invalid_correction";
 
 export class DomainInvariantError extends Error {
+  readonly code: DomainErrorCode;
   override readonly name = "DomainInvariantError";
 
-  constructor(
-    readonly code: DomainErrorCode,
-    message: string,
-  ) {
+  constructor(code: DomainErrorCode, message: string) {
     super(message);
+    this.code = code;
   }
 }

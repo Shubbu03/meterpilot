@@ -36,6 +36,11 @@ describe("tenant identity", () => {
   });
 
   test("defines the bounded API key permission set", () => {
-    expect(API_KEY_SCOPES).toEqual(["events:write", "events:read", "usage:read"]);
+    expect(API_KEY_SCOPES).toEqual([
+      "events:write",
+      "events:read",
+      "usage:read",
+      "reservations:write",
+    ]);
   });
 });

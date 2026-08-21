@@ -1,5 +1,7 @@
+import { MAX_MANUAL_JOB_RETRIES } from "@meterpilot/contracts/jobs";
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   foreignKey,
   index,
@@ -10,11 +12,13 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
 import { apiKeys, organizations } from "./tenancy";
+import { customers } from "./customers";
 
 const timestampColumn = (name: string) => timestamp(name, { mode: "date", withTimezone: true });
 
@@ -24,6 +28,7 @@ export const usageEventCorrectionKind = pgEnum("usage_event_correction_kind", [
 ]);
 
 export const jobStatus = pgEnum("job_status", ["pending", "processing", "completed", "failed"]);
+export const PROCESS_USAGE_EVENT_JOB_TYPE = "usage_event.process";
 
 export const usageEvents = pgTable(
   "usage_events",
@@ -36,11 +41,13 @@ export const usageEvents = pgTable(
     payloadHash: varchar("payload_hash", { length: 64 }).notNull(),
     eventType: varchar("event_type", { length: 128 }).notNull(),
     subjectKey: varchar("subject_key", { length: 128 }).notNull(),
+    customerId: uuid("customer_id").notNull(),
     occurredAt: timestampColumn("occurred_at").notNull(),
     receivedAt: timestampColumn("received_at").defaultNow().notNull(),
     properties: jsonb("properties").$type<Record<string, unknown>>().default({}).notNull(),
+    propertiesRedactedAt: timestampColumn("properties_redacted_at"),
     source: varchar("source", { length: 32 }).default("api_key").notNull(),
-    sourceApiKeyId: uuid("source_api_key_id").notNull(),
+    sourceApiKeyId: uuid("source_api_key_id"),
     correctionOfEventId: uuid("correction_of_event_id"),
     correctionKind: usageEventCorrectionKind("correction_kind"),
   },
@@ -50,6 +57,11 @@ export const usageEvents = pgTable(
       table.eventKey,
     ),
     unique("usage_events_organization_id_id_unique").on(table.organizationId, table.id),
+    foreignKey({
+      columns: [table.organizationId, table.customerId],
+      foreignColumns: [customers.organizationId, customers.id],
+      name: "usage_events_organization_customer_fk",
+    }).onDelete("restrict"),
     foreignKey({
       columns: [table.organizationId, table.sourceApiKeyId],
       foreignColumns: [apiKeys.organizationId, apiKeys.id],
@@ -65,13 +77,21 @@ export const usageEvents = pgTable(
       table.subjectKey,
       table.occurredAt,
     ),
+    index("usage_events_organization_customer_occurred_at_idx").on(
+      table.organizationId,
+      table.customerId,
+      table.occurredAt,
+    ),
     index("usage_events_organization_type_occurred_at_idx").on(
       table.organizationId,
       table.eventType,
       table.occurredAt,
     ),
     index("usage_events_organization_received_at_idx").on(table.organizationId, table.receivedAt),
-    index("usage_events_corrections_idx")
+    index("usage_events_retention_eligible_idx")
+      .on(table.organizationId, table.receivedAt, table.id)
+      .where(sql`${table.propertiesRedactedAt} is null`),
+    uniqueIndex("usage_events_direct_correction_unique")
       .on(table.organizationId, table.correctionOfEventId)
       .where(sql`${table.correctionOfEventId} is not null`),
     check(
@@ -87,7 +107,14 @@ export const usageEvents = pgTable(
       sql`${table.subjectKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]*$'`,
     ),
     check("usage_events_payload_hash_format_check", sql`${table.payloadHash} ~ '^[a-f0-9]{64}$'`),
-    check("usage_events_source_check", sql`${table.source} = 'api_key'`),
+    check(
+      "usage_events_source_check",
+      sql`(
+        ${table.source} = 'api_key' and ${table.sourceApiKeyId} is not null
+      ) or (
+        ${table.source} = 'quota_reservation' and ${table.sourceApiKeyId} is null
+      )`,
+    ),
     check(
       "usage_events_correction_shape_check",
       sql`(
@@ -97,6 +124,13 @@ export const usageEvents = pgTable(
           and ${table.correctionKind} is not null
           and ${table.correctionOfEventId} <> ${table.id}
         )
+      )`,
+    ),
+    check(
+      "usage_events_properties_redaction_check",
+      sql`${table.propertiesRedactedAt} is null or (
+        ${table.propertiesRedactedAt} >= ${table.receivedAt}
+        and ${table.properties} = '{}'::jsonb
       )`,
     ),
   ],
@@ -116,10 +150,12 @@ export const jobs = pgTable(
     status: jobStatus("status").default("pending").notNull(),
     payload: jsonb("payload").$type<Record<string, unknown>>().default({}).notNull(),
     attemptCount: integer("attempt_count").default(0).notNull(),
+    manualRetryCount: integer("manual_retry_count").default(0).notNull(),
     leaseOwner: varchar("lease_owner", { length: 128 }),
     leaseExpiresAt: timestampColumn("lease_expires_at"),
     nextAttemptAt: timestampColumn("next_attempt_at").defaultNow().notNull(),
     lastError: text("last_error"),
+    failureRetryable: boolean("failure_retryable"),
     createdAt: timestampColumn("created_at").defaultNow().notNull(),
     updatedAt: timestampColumn("updated_at").defaultNow().notNull(),
     completedAt: timestampColumn("completed_at"),
@@ -167,6 +203,21 @@ export const jobs = pgTable(
       )`,
     ),
     check("jobs_attempt_count_check", sql`${table.attemptCount} >= 0`),
+    check(
+      "jobs_manual_retry_count_check",
+      sql`${table.manualRetryCount} between 0 and ${MAX_MANUAL_JOB_RETRIES}`,
+    ),
+    check(
+      "jobs_failure_shape_check",
+      sql`(
+        (
+          (${table.lastError} is null and ${table.failureRetryable} is null)
+          or (${table.lastError} is not null and ${table.failureRetryable} is not null)
+        )
+        and (${table.status} <> 'completed' or ${table.lastError} is null)
+        and (${table.status} <> 'failed' or ${table.lastError} is not null)
+      )`,
+    ),
     check(
       "jobs_lease_shape_check",
       sql`(

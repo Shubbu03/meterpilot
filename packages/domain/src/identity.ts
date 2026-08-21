@@ -25,7 +25,12 @@ export const ORGANIZATION_MEMBERSHIP_ROLES = [
 
 export type OrganizationMembershipRole = (typeof ORGANIZATION_MEMBERSHIP_ROLES)[number];
 
-export const API_KEY_SCOPES = ["events:write", "events:read", "usage:read"] as const;
+export const API_KEY_SCOPES = [
+  "events:write",
+  "events:read",
+  "usage:read",
+  "reservations:write",
+] as const;
 
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
 

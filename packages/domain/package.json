@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./billing-period": "./src/billing-period.ts",
     "./corrections": "./src/corrections.ts",
     "./idempotency": "./src/idempotency.ts",
     "./identity": "./src/identity.ts",
@@ -12,8 +13,11 @@
     "./versioning": "./src/versioning.ts"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/corrections.ts src/idempotency.ts src/identity.ts src/time.ts src/versioning.ts --outdir dist --target browser --packages external",
+    "build": "bun build src/index.ts src/billing-period.ts src/corrections.ts src/idempotency.ts src/identity.ts src/time.ts src/versioning.ts --outdir dist --target browser --packages external",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@js-temporal/polyfill": "0.5.1"
   }
 }
