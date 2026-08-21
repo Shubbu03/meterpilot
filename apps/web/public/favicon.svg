@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <title>MeterPilot</title>
+  <rect width="32" height="32" rx="7" fill="#171713"/>
+  <path d="M8 22V10h4l4 6 4-6h4v12h-4v-6l-4 6-4-6v6H8Z" fill="#c8f85d"/>
+</svg>

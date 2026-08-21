@@ -1,0 +1,100 @@
+@import "@meterpilot/ui/globals.css";
+
+@source "../";
+
+@layer base {
+  html {
+    min-width: 20rem;
+    min-height: 100%;
+    background: var(--mp-color-canvas);
+  }
+
+  body {
+    min-width: 20rem;
+    min-height: 100svh;
+    margin: 0;
+    overflow-x: hidden;
+    background: var(--mp-color-canvas);
+    color: var(--mp-color-ink);
+    font-family: var(--mp-font-sans);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  ::selection {
+    color: var(--mp-color-ink);
+    background: var(--mp-color-signal);
+  }
+}
+
+@layer components {
+  .ledger-surface {
+    background-image:
+      linear-gradient(oklch(20% 0.015 88 / 5%) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(20% 0.015 88 / 5%) 1px, transparent 1px);
+    background-size: 2rem 2rem;
+  }
+
+  .page-frame {
+    width: min(100%, 96rem);
+    margin-inline: auto;
+    padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 4vw, 3rem) clamp(3rem, 7vw, 6rem);
+  }
+
+  .section-kicker {
+    font-family: var(--mp-font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    color: var(--mp-color-ink-muted);
+    text-transform: uppercase;
+  }
+
+  .section-title {
+    margin-top: 0.35rem;
+    font-family: var(--mp-font-display);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .foundation-ledger {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 17rem minmax(0, 1fr);
+  }
+
+  .auth-layout {
+    display: grid;
+    grid-template-columns: minmax(24rem, 1.05fr) minmax(28rem, 0.95fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}

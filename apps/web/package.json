@@ -1,0 +1,36 @@
+{
+  "name": "@meterpilot/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "5.3.0",
+    "@fontsource-variable/newsreader": "5.3.0",
+    "@meterpilot/config": "workspace:*",
+    "@meterpilot/contracts": "workspace:*",
+    "@meterpilot/ui": "workspace:*",
+    "@phosphor-icons/react": "2.1.10",
+    "@tanstack/react-query": "5.101.4",
+    "better-auth": "1.6.26",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router": "8.3.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "tailwindcss": "4.3.3",
+    "vite": "8.2.1"
+  }
+}
