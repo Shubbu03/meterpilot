@@ -42,7 +42,13 @@ describe("durable job repository", () => {
       }),
     ).rejects.toThrow("Next attempt time");
     await expect(
-      repository.fail({ jobId: "job-1", lastError: "", now, workerId: "worker-1" }),
+      repository.fail({
+        jobId: "job-1",
+        lastError: "",
+        now,
+        retryable: false,
+        workerId: "worker-1",
+      }),
     ).rejects.toThrow("Last error");
   });
 });

@@ -5,15 +5,19 @@
   "type": "module",
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun",
-    "dev": "bun run --watch src/index.ts",
-    "start": "bun run src/index.ts",
+    "dev": "bun --env-file=.env --watch src/index.ts",
+    "start": "bun --env-file=.env src/index.ts",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
     "@meterpilot/config": "workspace:*",
+    "@meterpilot/contracts": "workspace:*",
     "@meterpilot/db": "workspace:*",
+    "@meterpilot/domain": "workspace:*",
     "@meterpilot/observability": "workspace:*",
+    "@meterpilot/pricing-engine": "workspace:*",
+    "decimal.js": "10.6.0",
     "drizzle-orm": "1.0.0-rc.4",
     "zod": "4.4.3"
   }

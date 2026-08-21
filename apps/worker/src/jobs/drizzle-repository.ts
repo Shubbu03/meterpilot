@@ -1,6 +1,6 @@
 import type { Database } from "@meterpilot/db";
 import { jobs } from "@meterpilot/db/schema";
-import { and, asc, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
 
 import type {
   ClaimedJob,
@@ -129,6 +129,7 @@ export function createDrizzleJobRepository(database: Database["db"]): JobReposit
         .update(jobs)
         .set({
           completedAt: options.now,
+          failureRetryable: null,
           lastError: null,
           leaseExpiresAt: null,
           leaseOwner: null,
@@ -155,6 +156,7 @@ export function createDrizzleJobRepository(database: Database["db"]): JobReposit
         .update(jobs)
         .set({
           completedAt: options.now,
+          failureRetryable: options.retryable,
           lastError: options.lastError,
           leaseExpiresAt: null,
           leaseOwner: null,
@@ -174,6 +176,26 @@ export function createDrizzleJobRepository(database: Database["db"]): JobReposit
       return transitionResult(updated);
     },
 
+    async inspect(now) {
+      assertDate(now, "Queue inspection time");
+      const unprocessed = inArray(jobs.status, ["pending", "processing"]);
+      const [[depthRow], [oldestRow]] = await Promise.all([
+        database.select({ value: count() }).from(jobs).where(unprocessed),
+        database
+          .select({ createdAt: jobs.createdAt })
+          .from(jobs)
+          .where(unprocessed)
+          .orderBy(asc(jobs.createdAt))
+          .limit(1),
+      ]);
+      const depth = depthRow?.value ?? 0;
+      const oldestAgeMs = oldestRow
+        ? Math.max(0, now.getTime() - oldestRow.createdAt.getTime())
+        : 0;
+
+      return { depth, oldestAgeMs };
+    },
+
     async retry(options) {
       assertFinishOptions(options);
       assertDate(options.nextAttemptAt, "Next attempt time");
@@ -186,6 +208,7 @@ export function createDrizzleJobRepository(database: Database["db"]): JobReposit
         .update(jobs)
         .set({
           completedAt: null,
+          failureRetryable: true,
           lastError: options.lastError,
           leaseExpiresAt: null,
           leaseOwner: null,
