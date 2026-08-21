@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  createUsageEventCorrectionRequestSchema,
   createUsageEventBatchSchema,
   createUsageEventSchema,
   decimalStringSchema,
@@ -9,6 +10,8 @@ import {
   MAX_EVENT_BATCH_SIZE,
   usageEventBatchEnvelopeSchema,
   usageEventSchema,
+  usageEventCorrectionResponseSchema,
+  usageEventListQuerySchema,
 } from "../src/events";
 
 const NOW = new Date("2026-08-13T12:00:00.000Z");
@@ -25,6 +28,28 @@ const validEvent = {
 };
 
 describe("usage event contracts", () => {
+  test("validates bounded event-explorer filters and half-open occurrence ranges", () => {
+    expect(
+      usageEventListQuerySchema.parse({
+        limit: "25",
+        occurredAfter: "2026-08-01T00:00:00.000Z",
+        occurredBefore: "2026-09-01T00:00:00.000Z",
+        processingState: "processed",
+      }),
+    ).toEqual({
+      limit: 25,
+      occurredAfter: "2026-08-01T00:00:00.000Z",
+      occurredBefore: "2026-09-01T00:00:00.000Z",
+      processingState: "processed",
+    });
+    expect(
+      usageEventListQuerySchema.safeParse({
+        occurredAfter: "2026-09-01T00:00:00.000Z",
+        occurredBefore: "2026-08-01T00:00:00.000Z",
+      }).success,
+    ).toBe(false);
+  });
+
   test("parses the documented event shape", () => {
     expect(createUsageEventSchema({ now: NOW }).parse(validEvent)).toEqual(validEvent);
   });
@@ -110,8 +135,11 @@ describe("usage event contracts", () => {
         receivedAt: NOW.toISOString(),
       }),
     ).toEqual({
+      correctedBy: null,
+      correctionOf: null,
       ...validEvent,
       processingState: "pending",
+      propertiesRedactedAt: null,
       receivedAt: NOW.toISOString(),
     });
     expect(
@@ -119,8 +147,56 @@ describe("usage event contracts", () => {
         ...validEvent,
         jobId: "internal",
         processingState: "pending",
+        propertiesRedactedAt: null,
         receivedAt: NOW.toISOString(),
       }).success,
     ).toBeFalse();
+  });
+
+  test("models bounded reverse and replacement corrections without an age cutoff", () => {
+    const correctionSchema = createUsageEventCorrectionRequestSchema({ now: NOW });
+
+    expect(correctionSchema.parse({ id: "evt_reverse", kind: "reverse" })).toEqual({
+      id: "evt_reverse",
+      kind: "reverse",
+    });
+    expect(
+      correctionSchema.parse({
+        event: { ...validEvent, id: "evt_replacement", occurredAt: "2020-01-01T00:00:00.000Z" },
+        kind: "replace",
+      }),
+    ).toMatchObject({ event: { id: "evt_replacement" }, kind: "replace" });
+    expect(
+      correctionSchema.safeParse({
+        event: { ...validEvent, id: "evt_future", occurredAt: "2026-08-13T12:06:00.000Z" },
+        kind: "replace",
+      }).success,
+    ).toBeFalse();
+    expect(
+      correctionSchema.safeParse({ id: "evt_reverse", kind: "reverse", extra: true }).success,
+    ).toBeFalse();
+  });
+
+  test("models correction acceptance and event relationships", () => {
+    expect(
+      usageEventCorrectionResponseSchema.parse({
+        correction: {
+          correctedEventId: "evt_original",
+          correctionEventId: "evt_reversal",
+          kind: "reverse",
+          status: "accepted",
+        },
+        requestId: "request_correction",
+      }),
+    ).toMatchObject({ correction: { kind: "reverse", status: "accepted" } });
+    expect(
+      storedUsageEventSchema.parse({
+        ...validEvent,
+        correctedBy: { eventId: "evt_reversal", kind: "reverse" },
+        correctionOf: null,
+        processingState: "processed",
+        receivedAt: NOW.toISOString(),
+      }),
+    ).toMatchObject({ correctedBy: { eventId: "evt_reversal", kind: "reverse" } });
   });
 });

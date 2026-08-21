@@ -6,12 +6,22 @@
   "exports": {
     ".": "./src/index.ts",
     "./api-keys": "./src/api-keys.ts",
+    "./catalog": "./src/catalog.ts",
     "./common": "./src/common.ts",
+    "./customers": "./src/customers.ts",
+    "./entitlements": "./src/entitlements.ts",
     "./events": "./src/events.ts",
-    "./organizations": "./src/organizations.ts"
+    "./jobs": "./src/jobs.ts",
+    "./meters": "./src/meters.ts",
+    "./organizations": "./src/organizations.ts",
+    "./operations": "./src/operations.ts",
+    "./previews": "./src/previews.ts",
+    "./retention": "./src/retention.ts",
+    "./simulations": "./src/simulations.ts",
+    "./usage": "./src/usage.ts"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/api-keys.ts src/common.ts src/events.ts src/organizations.ts --outdir dist --target browser --packages external",
+    "build": "bun build src/index.ts src/api-keys.ts src/catalog.ts src/common.ts src/customers.ts src/entitlements.ts src/events.ts src/jobs.ts src/meters.ts src/operations.ts src/organizations.ts src/previews.ts src/retention.ts src/simulations.ts src/usage.ts --outdir dist --target browser --packages external",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },

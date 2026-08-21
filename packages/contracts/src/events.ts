@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { requestIdSchema } from "./common";
+import { createCursorPageSchema, cursorPaginationQuerySchema, requestIdSchema } from "./common";
+import { organizationIdSchema } from "./organizations";
 
 export const MAX_EVENT_BATCH_SIZE = 500;
 export const MAX_EVENT_SIZE_BYTES = 64 * 1024;
@@ -24,6 +25,10 @@ export const eventIdSchema = z
 
 export const eventParamSchema = z.strictObject({
   eventKey: eventIdSchema,
+});
+
+export const organizationEventParamSchema = eventParamSchema.extend({
+  organizationId: organizationIdSchema,
 });
 
 export const eventTypeSchema = z
@@ -187,11 +192,63 @@ export const usageEventBatchEnvelopeSchema = z.strictObject({
 
 export const eventProcessingStateSchema = z.enum(["pending", "processing", "processed", "failed"]);
 
+export const usageEventCorrectionKindSchema = z.enum(["reverse", "replace"]);
+
+const reverseUsageEventCorrectionRequestSchema = z.strictObject({
+  id: eventIdSchema,
+  kind: z.literal("reverse"),
+});
+
+const replaceUsageEventCorrectionRequestSchema = z.strictObject({
+  event: usageEventSchema,
+  kind: z.literal("replace"),
+});
+
+export const usageEventCorrectionRequestSchema = z.discriminatedUnion("kind", [
+  reverseUsageEventCorrectionRequestSchema,
+  replaceUsageEventCorrectionRequestSchema,
+]);
+
+export function createUsageEventCorrectionRequestSchema(
+  options: Pick<EventTimeValidationOptions, "maxFutureSkewMs" | "now">,
+) {
+  const now = options.now.getTime();
+  const maxFutureSkewMs = options.maxFutureSkewMs ?? MAX_EVENT_FUTURE_SKEW_MS;
+
+  if (!Number.isFinite(now)) {
+    throw new TypeError("Correction validation requires a valid current time.");
+  }
+  if (maxFutureSkewMs < 0) {
+    throw new RangeError("Correction future skew must not be negative.");
+  }
+
+  return usageEventCorrectionRequestSchema.superRefine((request, context) => {
+    if (
+      request.kind === "replace" &&
+      Date.parse(request.event.occurredAt) > now + maxFutureSkewMs
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "must not be more than five minutes in the future",
+        path: ["event", "occurredAt"],
+      });
+    }
+  });
+}
+
+export const usageEventCorrectionReferenceSchema = z.strictObject({
+  eventId: eventIdSchema,
+  kind: usageEventCorrectionKindSchema,
+});
+
 export const storedUsageEventSchema = z.strictObject({
+  correctedBy: usageEventCorrectionReferenceSchema.nullable().default(null),
+  correctionOf: usageEventCorrectionReferenceSchema.nullable().default(null),
   id: eventIdSchema,
   occurredAt: z.iso.datetime({ offset: true }),
   processingState: eventProcessingStateSchema,
   properties: eventPropertiesSchema,
+  propertiesRedactedAt: z.iso.datetime({ offset: true }).nullable().default(null),
   receivedAt: z.iso.datetime({ offset: true }),
   subject: subjectKeySchema,
   type: eventTypeSchema,
@@ -199,6 +256,39 @@ export const storedUsageEventSchema = z.strictObject({
 
 export const usageEventResponseSchema = z.strictObject({
   event: storedUsageEventSchema,
+  requestId: requestIdSchema,
+});
+
+export const usageEventSummarySchema = storedUsageEventSchema
+  .omit({ properties: true })
+  .extend({ customerKey: subjectKeySchema });
+
+export const usageEventListQuerySchema = cursorPaginationQuerySchema
+  .extend({
+    customerKey: subjectKeySchema.optional(),
+    occurredAfter: z.iso.datetime({ offset: true }).optional(),
+    occurredBefore: z.iso.datetime({ offset: true }).optional(),
+    processingState: eventProcessingStateSchema.optional(),
+    subject: subjectKeySchema.optional(),
+    type: eventTypeSchema.optional(),
+  })
+  .refine(
+    (value) =>
+      !value.occurredAfter ||
+      !value.occurredBefore ||
+      Date.parse(value.occurredBefore) > Date.parse(value.occurredAfter),
+    { message: "must be later than occurredAfter", path: ["occurredBefore"] },
+  );
+
+export const usageEventListResponseSchema = createCursorPageSchema(usageEventSummarySchema);
+
+export const usageEventCorrectionResponseSchema = z.strictObject({
+  correction: z.strictObject({
+    correctedEventId: eventIdSchema,
+    correctionEventId: eventIdSchema,
+    kind: usageEventCorrectionKindSchema,
+    status: z.enum(["accepted", "duplicate"]),
+  }),
   requestId: requestIdSchema,
 });
 
@@ -240,3 +330,9 @@ export type EventIngestionResult = z.infer<typeof eventIngestionResultSchema>;
 export type EventIngestionResponse = z.infer<typeof eventIngestionResponseSchema>;
 export type EventProcessingState = z.infer<typeof eventProcessingStateSchema>;
 export type StoredUsageEvent = z.infer<typeof storedUsageEventSchema>;
+export type UsageEventListQuery = z.output<typeof usageEventListQuerySchema>;
+export type UsageEventSummary = z.infer<typeof usageEventSummarySchema>;
+export type UsageEventCorrectionKind = z.infer<typeof usageEventCorrectionKindSchema>;
+export type UsageEventCorrectionRequest = z.output<typeof usageEventCorrectionRequestSchema>;
+export type UsageEventCorrectionResponse = z.infer<typeof usageEventCorrectionResponseSchema>;
+export type UsageEventCorrectionReference = z.infer<typeof usageEventCorrectionReferenceSchema>;
