@@ -4,6 +4,11 @@ import {
   canAssignMembershipRole,
   canChangeMembershipRole,
   canManageApiKeys,
+  canManageCatalog,
+  canManageCustomers,
+  canManageEntitlements,
+  canManageFailedJobs,
+  canManageMeters,
   canRemoveMembership,
 } from "../src/features/organizations/authorization";
 
@@ -35,5 +40,28 @@ describe("organization membership authorization", () => {
     expect(canManageApiKeys("developer")).toBe(false);
     expect(canManageApiKeys("analyst")).toBe(false);
     expect(canManageApiKeys("support")).toBe(false);
+  });
+
+  test("limits failed-job recovery to owners and administrators", () => {
+    expect(canManageFailedJobs("owner")).toBe(true);
+    expect(canManageFailedJobs("admin")).toBe(true);
+    expect(canManageFailedJobs("developer")).toBe(false);
+    expect(canManageFailedJobs("analyst")).toBe(false);
+    expect(canManageFailedJobs("support")).toBe(false);
+  });
+
+  test("allows developers to manage metering configuration but not support roles", () => {
+    for (const role of ["owner", "admin", "developer"] as const) {
+      expect(canManageCustomers(role)).toBe(true);
+      expect(canManageCatalog(role)).toBe(true);
+      expect(canManageEntitlements(role)).toBe(true);
+      expect(canManageMeters(role)).toBe(true);
+    }
+    for (const role of ["analyst", "support"] as const) {
+      expect(canManageCustomers(role)).toBe(false);
+      expect(canManageCatalog(role)).toBe(false);
+      expect(canManageEntitlements(role)).toBe(false);
+      expect(canManageMeters(role)).toBe(false);
+    }
   });
 });

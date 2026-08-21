@@ -7,8 +7,13 @@ import type { TenantAuthorization } from "../src/features/organizations/reposito
 import { createApp } from "../src/http/app";
 import {
   createApiKeyServiceStub,
+  createCatalogRepositoryStub,
+  createCustomerRepositoryStub,
+  createEntitlementRepositoryStub,
   createEventServiceStub,
+  createMeterRepositoryStub,
   createOrganizationRepositoryStub,
+  createUsageRepositoryStub,
 } from "./helpers";
 
 const USER_A_ID = "11111111-1111-4111-8111-111111111111";
@@ -90,7 +95,11 @@ function createIsolationApp(authenticatedUserId: string | null) {
     }),
     auth,
     checkDatabaseHealth: () => Promise.resolve(),
+    catalogRepository: createCatalogRepositoryStub(),
+    customerRepository: createCustomerRepositoryStub(),
+    entitlementRepository: createEntitlementRepositoryStub(),
     eventService: createEventServiceStub(),
+    meterRepository: createMeterRepositoryStub(),
     observability: createObservability({
       environment: "test",
       level: "error",
@@ -98,6 +107,7 @@ function createIsolationApp(authenticatedUserId: string | null) {
       write: () => undefined,
     }),
     organizationRepository: repository,
+    usageRepository: createUsageRepositoryStub(),
   });
 
   return {

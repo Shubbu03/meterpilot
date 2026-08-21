@@ -23,6 +23,7 @@ export type AuthenticationOptions = Readonly<{
   baseUrl: string;
   database: Database["db"];
   secret: string;
+  trustedOrigins: readonly string[];
 }>;
 
 export function createAuthentication(options: AuthenticationOptions) {
@@ -43,7 +44,14 @@ export function createAuthentication(options: AuthenticationOptions) {
       enabled: true,
       revokeSessionsOnPasswordReset: true,
     },
+    rateLimit: {
+      enabled: true,
+      max: 100,
+      storage: "memory",
+      window: 60,
+    },
     secret: options.secret,
+    trustedOrigins: [...options.trustedOrigins],
   });
 }
 

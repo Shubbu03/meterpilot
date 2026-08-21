@@ -25,6 +25,80 @@ const event: UsageEvent = {
 };
 
 describe("event service", () => {
+  test("persists a reverse correction with a target-bound idempotency hash", async () => {
+    let receivedWrite: unknown;
+    const service = createEventService(
+      createEventRepositoryStub({
+        correct(_source, write) {
+          receivedWrite = write;
+          return Promise.resolve({
+            correctedEventId: event.id,
+            correctionEventId: "evt_reverse",
+            kind: "reverse",
+            status: "accepted",
+          });
+        },
+      }),
+      { now: () => NOW },
+    );
+
+    expect(
+      await service.correct(
+        principal,
+        event.id,
+        { id: "evt_reverse", kind: "reverse" },
+        "request_reverse",
+      ),
+    ).toEqual({
+      response: {
+        correction: {
+          correctedEventId: event.id,
+          correctionEventId: "evt_reverse",
+          kind: "reverse",
+          status: "accepted",
+        },
+        requestId: "request_reverse",
+      },
+      status: "ok",
+    });
+    expect(receivedWrite).toMatchObject({
+      correctedEventKey: event.id,
+      receivedAt: NOW,
+      request: { id: "evt_reverse", kind: "reverse" },
+      requestId: "request_reverse",
+    });
+    expect(receivedWrite).toHaveProperty("payloadHash", expect.stringMatching(/^[a-f0-9]{64}$/));
+  });
+
+  test("rejects self-references and future replacements before persistence", async () => {
+    let writes = 0;
+    const service = createEventService(
+      createEventRepositoryStub({
+        correct: () => {
+          writes++;
+          return Promise.resolve({ status: "not_found" });
+        },
+      }),
+      { now: () => NOW },
+    );
+
+    expect(
+      await service.correct(principal, event.id, { id: event.id, kind: "reverse" }, "self"),
+    ).toMatchObject({ status: "validation_error" });
+    expect(
+      await service.correct(
+        principal,
+        event.id,
+        {
+          event: { ...event, id: "evt_future", occurredAt: "2026-08-20T04:06:00.000Z" },
+          kind: "replace",
+        },
+        "future",
+      ),
+    ).toMatchObject({ status: "validation_error" });
+    expect(writes).toBe(0);
+  });
+
   test("persists a validated event with its canonical hash and source", async () => {
     let receivedSource: unknown;
     let receivedWrites: unknown;
@@ -131,6 +205,7 @@ describe("event service", () => {
           return Promise.resolve({
             event,
             processingState: "pending",
+            propertiesRedactedAt: null,
             receivedAt: NOW,
           });
         },
@@ -138,8 +213,11 @@ describe("event service", () => {
     );
 
     expect(await service.find(principal, event.id)).toEqual({
+      correctedBy: null,
+      correctionOf: null,
       ...event,
       processingState: "pending",
+      propertiesRedactedAt: null,
       receivedAt: NOW.toISOString(),
     });
     expect(receivedOrganizationId).toBe(ORGANIZATION_ID);

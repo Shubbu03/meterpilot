@@ -10,13 +10,19 @@ import type { OrganizationRepository } from "../src/features/organizations/repos
 import { createApp } from "../src/http/app";
 import {
   createApiKeyServiceStub,
+  createCatalogRepositoryStub,
+  createCustomerRepositoryStub,
+  createEntitlementRepositoryStub,
   createEventServiceStub,
+  createMeterRepositoryStub,
   createOrganizationRepositoryStub,
+  createUsageRepositoryStub,
 } from "./helpers";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const ORGANIZATION_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const CREATED_AT = "2026-08-19T09:00:00.000Z";
+const TRUSTED_BROWSER_ORIGIN = "http://localhost:5173";
 
 const ownerMembership: OrganizationMembership = {
   createdAt: CREATED_AT,
@@ -53,7 +59,11 @@ function createOrganizationTestApp(repository: OrganizationRepository) {
     apiKeyService: createApiKeyServiceStub(),
     auth,
     checkDatabaseHealth: () => Promise.resolve(),
+    catalogRepository: createCatalogRepositoryStub(),
+    customerRepository: createCustomerRepositoryStub(),
+    entitlementRepository: createEntitlementRepositoryStub(),
     eventService: createEventServiceStub(),
+    meterRepository: createMeterRepositoryStub(),
     observability: createObservability({
       environment: "test",
       level: "error",
@@ -61,6 +71,8 @@ function createOrganizationTestApp(repository: OrganizationRepository) {
       write: () => undefined,
     }),
     organizationRepository: repository,
+    trustedBrowserOrigin: TRUSTED_BROWSER_ORIGIN,
+    usageRepository: createUsageRepositoryStub(),
   });
 }
 
@@ -105,6 +117,29 @@ describe("organization routes", () => {
       items: [organizationItem],
       nextCursor: "next-page",
     });
+  });
+
+  test("accepts organization mutations from the configured browser origin", async () => {
+    let createCalls = 0;
+    const repository = createOrganizationRepositoryStub({
+      createOrganization: () => {
+        createCalls++;
+        return Promise.resolve(organizationItem);
+      },
+    });
+    const app = createOrganizationTestApp(repository);
+    const response = await app.request("/v1/organizations", {
+      body: JSON.stringify({ name: "Acme", slug: "acme" }),
+      headers: {
+        "Content-Type": "application/json",
+        Origin: TRUSTED_BROWSER_ORIGIN,
+      },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(201);
+    expect(createCalls).toBe(1);
+    expect(response.headers.get("access-control-allow-origin")).toBe(TRUSTED_BROWSER_ORIGIN);
   });
 
   test("maps last-owner protection to a stable conflict", async () => {

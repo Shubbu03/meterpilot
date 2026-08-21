@@ -1,4 +1,8 @@
-import type { JsonValue, UsageEvent } from "@meterpilot/contracts/events";
+import type {
+  JsonValue,
+  UsageEvent,
+  UsageEventCorrectionRequest,
+} from "@meterpilot/contracts/events";
 import { payloadHash, type PayloadHash } from "@meterpilot/domain/idempotency";
 import { createHash } from "node:crypto";
 
@@ -41,4 +45,40 @@ export function canonicalUsageEvent(event: UsageEvent): string {
 
 export function hashUsageEvent(event: UsageEvent): PayloadHash {
   return payloadHash(createHash("sha256").update(canonicalUsageEvent(event), "utf8").digest("hex"));
+}
+
+export function canonicalUsageEventCorrection(
+  correctedEventId: string,
+  request: UsageEventCorrectionRequest,
+): string {
+  return canonicalizeJson(
+    request.kind === "reverse"
+      ? {
+          correctedEventId,
+          correctionEventId: request.id,
+          kind: request.kind,
+        }
+      : {
+          correctedEventId,
+          event: {
+            id: request.event.id,
+            occurredAt: new Date(request.event.occurredAt).toISOString(),
+            properties: request.event.properties,
+            subject: request.event.subject,
+            type: request.event.type,
+          },
+          kind: request.kind,
+        },
+  );
+}
+
+export function hashUsageEventCorrection(
+  correctedEventId: string,
+  request: UsageEventCorrectionRequest,
+): PayloadHash {
+  return payloadHash(
+    createHash("sha256")
+      .update(canonicalUsageEventCorrection(correctedEventId, request), "utf8")
+      .digest("hex"),
+  );
 }

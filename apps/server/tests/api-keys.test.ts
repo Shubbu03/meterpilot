@@ -11,8 +11,13 @@ import type { AuthGateway } from "../src/features/identity/authentication";
 import { createApp } from "../src/http/app";
 import {
   createApiKeyServiceStub,
+  createCatalogRepositoryStub,
+  createCustomerRepositoryStub,
+  createEntitlementRepositoryStub,
   createEventServiceStub,
+  createMeterRepositoryStub,
   createOrganizationRepositoryStub,
+  createUsageRepositoryStub,
 } from "./helpers";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -57,7 +62,11 @@ function createApiKeyTestApp(service: ApiKeyService, role: OrganizationMembershi
     apiKeyService: service,
     auth,
     checkDatabaseHealth: () => Promise.resolve(),
+    catalogRepository: createCatalogRepositoryStub(),
+    customerRepository: createCustomerRepositoryStub(),
+    entitlementRepository: createEntitlementRepositoryStub(),
     eventService: createEventServiceStub(),
+    meterRepository: createMeterRepositoryStub(),
     observability: createObservability({
       environment: "test",
       level: "error",
@@ -72,6 +81,7 @@ function createApiKeyTestApp(service: ApiKeyService, role: OrganizationMembershi
           organization,
         }),
     }),
+    usageRepository: createUsageRepositoryStub(),
   });
 }
 

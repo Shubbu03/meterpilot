@@ -1,5 +1,5 @@
-import type { AuthenticatedSession } from "../features/identity/authentication";
 import type { ApiKeyPrincipal } from "../features/api-keys/repository";
+import type { AuthenticatedSession } from "../features/identity/authentication";
 import type { TenantAuthorization } from "../features/organizations/repository";
 
 export type AppEnvironment = Readonly<{
@@ -7,5 +7,6 @@ export type AppEnvironment = Readonly<{
     apiKeyPrincipal: ApiKeyPrincipal;
     authenticatedSession: AuthenticatedSession;
     tenant: TenantAuthorization;
+    trustedBrowserOrigin: string | undefined;
   };
 }>;

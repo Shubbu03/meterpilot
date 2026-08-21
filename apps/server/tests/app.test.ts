@@ -5,11 +5,17 @@ import type { AuthGateway } from "../src/features/identity/authentication";
 import { createApp } from "../src/http/app";
 import {
   createApiKeyServiceStub,
+  createCatalogRepositoryStub,
+  createCustomerRepositoryStub,
+  createEntitlementRepositoryStub,
   createEventServiceStub,
+  createMeterRepositoryStub,
   createOrganizationRepositoryStub,
+  createUsageRepositoryStub,
 } from "./helpers";
 
 type LogEntry = Readonly<Record<string, unknown>>;
+const TRUSTED_BROWSER_ORIGIN = "http://localhost:5173";
 
 function createTestApp(options: Readonly<{ checkDatabaseHealth?: () => Promise<void> }> = {}) {
   const logs: LogEntry[] = [];
@@ -30,10 +36,16 @@ function createTestApp(options: Readonly<{ checkDatabaseHealth?: () => Promise<v
     apiKeyService: createApiKeyServiceStub(),
     auth,
     checkDatabaseHealth: options.checkDatabaseHealth ?? (() => Promise.resolve()),
+    catalogRepository: createCatalogRepositoryStub(),
+    customerRepository: createCustomerRepositoryStub(),
+    entitlementRepository: createEntitlementRepositoryStub(),
     eventService: createEventServiceStub(),
+    meterRepository: createMeterRepositoryStub(),
     now: () => currentTime++,
     observability,
     organizationRepository: createOrganizationRepositoryStub(),
+    trustedBrowserOrigin: TRUSTED_BROWSER_ORIGIN,
+    usageRepository: createUsageRepositoryStub(),
   });
 
   return { app, logs };
@@ -95,6 +107,52 @@ describe("HTTP application", () => {
     expect(response.headers.get("x-request-id")).toBeString();
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+  });
+
+  test("allows credentialed preflight requests only from the configured browser origin", async () => {
+    const { app } = createTestApp();
+    const response = await app.request("/v1/organizations", {
+      headers: {
+        "Access-Control-Request-Headers": "content-type,x-request-id",
+        "Access-Control-Request-Method": "POST",
+        Origin: TRUSTED_BROWSER_ORIGIN,
+      },
+      method: "OPTIONS",
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe(TRUSTED_BROWSER_ORIGIN);
+    expect(response.headers.get("access-control-allow-credentials")).toBe("true");
+    expect(response.headers.get("access-control-allow-methods")).toContain("POST");
+    expect(response.headers.get("access-control-allow-headers")).toBe("Content-Type,X-Request-Id");
+    expect(response.headers.get("access-control-max-age")).toBe("600");
+    expect(response.headers.get("vary")).toContain("Origin");
+  });
+
+  test("does not grant CORS access to an untrusted browser origin", async () => {
+    const { app } = createTestApp();
+    const response = await app.request("/health", {
+      headers: { Origin: "https://attacker.example" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    expect(response.headers.get("vary")).toContain("Origin");
+  });
+
+  test("does not grant preflight access to an untrusted browser origin", async () => {
+    const { app } = createTestApp();
+    const response = await app.request("/v1/organizations", {
+      headers: {
+        "Access-Control-Request-Headers": "content-type,x-request-id",
+        "Access-Control-Request-Method": "POST",
+        Origin: "https://attacker.example",
+      },
+      method: "OPTIONS",
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
   });
 
   test("preserves a valid caller request ID", async () => {

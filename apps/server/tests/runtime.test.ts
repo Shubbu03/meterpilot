@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { ServerConfig } from "@meterpilot/config/server";
 import { createObservability, type Logger } from "@meterpilot/observability";
 
-import type { AuthGateway } from "../src/features/identity/authentication";
+import type { AuthenticationOptions, AuthGateway } from "../src/features/identity/authentication";
 import { type BootstrapDependencies, bootstrapServer } from "../src/runtime/bootstrap";
 import {
   type ServerFactoryOptions,
@@ -12,8 +12,13 @@ import {
 } from "../src/runtime/server";
 import {
   createApiKeyServiceStub,
+  createCatalogRepositoryStub,
+  createCustomerRepositoryStub,
+  createEntitlementRepositoryStub,
   createEventServiceStub,
+  createMeterRepositoryStub,
   createOrganizationRepositoryStub,
+  createUsageRepositoryStub,
 } from "./helpers";
 
 type LogEntry = Readonly<Record<string, unknown>>;
@@ -62,6 +67,10 @@ const testConfig: ServerConfig = {
   logLevel: "debug",
   nodeEnvironment: "test",
   port: 4321,
+  rateLimitApiKeyRequests: 12_000,
+  rateLimitDashboardRequests: 600,
+  rateLimitWindowMs: 60_000,
+  webAppOrigin: "http://localhost:5173",
 };
 
 describe("server runtime", () => {
@@ -173,6 +182,7 @@ describe("server bootstrap", () => {
   test("composes config, observability, database health, and runtime dependencies", async () => {
     const databaseClient = {} as never;
     let checkedClient: unknown;
+    let receivedAuthenticationOptions: AuthenticationOptions | undefined;
     let receivedRuntimeOptions: Parameters<BootstrapDependencies["startServer"]>[0] | undefined;
     const runtime = Object.freeze({ stop: () => Promise.resolve() });
     const observability = createObservability({
@@ -191,15 +201,23 @@ describe("server bootstrap", () => {
         return Promise.resolve();
       },
       createApiKeyService: () => createApiKeyServiceStub(),
-      createAuthGateway: () => auth,
+      createAuthGateway(options) {
+        receivedAuthenticationOptions = options;
+        return auth;
+      },
+      createCatalogRepository: () => createCatalogRepositoryStub(),
       createDatabase: () => ({
         client: databaseClient,
         close: () => Promise.resolve(),
         db: {} as never,
       }),
+      createCustomerRepository: () => createCustomerRepositoryStub(),
       createEventService: () => createEventServiceStub(),
+      createEntitlementRepository: () => createEntitlementRepositoryStub(),
+      createMeterRepository: () => createMeterRepositoryStub(),
       createObservability: () => observability,
       createOrganizationRepository: () => createOrganizationRepositoryStub(),
+      createUsageRepository: () => createUsageRepositoryStub(),
       parseServerConfig: () => testConfig,
       startServer(options) {
         receivedRuntimeOptions = options;
@@ -209,14 +227,20 @@ describe("server bootstrap", () => {
 
     const result = await bootstrapServer(dependencies);
     const healthResponse = await receivedRuntimeOptions?.app.fetch(
-      new Request("http://localhost/health"),
+      new Request("http://localhost/health", {
+        headers: { Origin: testConfig.webAppOrigin },
+      }),
     );
 
     expect(result).toBe(runtime);
     expect(receivedRuntimeOptions?.config).toBe(testConfig);
     expect(receivedRuntimeOptions?.logger).toBe(observability.logger);
     expect(healthResponse?.status).toBe(200);
+    expect(healthResponse?.headers.get("access-control-allow-origin")).toBe(
+      testConfig.webAppOrigin,
+    );
     expect(checkedClient).toBe(databaseClient);
+    expect(receivedAuthenticationOptions?.trustedOrigins).toEqual([testConfig.webAppOrigin]);
   });
 
   test("closes the database when listener startup fails", async () => {
@@ -238,6 +262,7 @@ describe("server bootstrap", () => {
         getSession: () => Promise.resolve(null),
         handler: () => Promise.resolve(new Response("auth response")),
       }),
+      createCatalogRepository: () => createCatalogRepositoryStub(),
       createDatabase: () => ({
         client: {} as never,
         close: () => {
@@ -246,9 +271,13 @@ describe("server bootstrap", () => {
         },
         db: {} as never,
       }),
+      createCustomerRepository: () => createCustomerRepositoryStub(),
       createEventService: () => createEventServiceStub(),
+      createEntitlementRepository: () => createEntitlementRepositoryStub(),
+      createMeterRepository: () => createMeterRepositoryStub(),
       createObservability: () => observability,
       createOrganizationRepository: () => createOrganizationRepositoryStub(),
+      createUsageRepository: () => createUsageRepositoryStub(),
       parseServerConfig: () => testConfig,
       startServer: () => {
         throw startupError;

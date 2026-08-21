@@ -9,6 +9,7 @@ describe("Better Auth configuration", () => {
       baseUrl: "http://localhost:3000",
       database: {} as Database["db"],
       secret: "test-secret-that-is-at-least-32-characters-long",
+      trustedOrigins: ["http://localhost:5173"],
     });
 
     expect(authentication.options.baseURL).toBe("http://localhost:3000");
@@ -17,6 +18,13 @@ describe("Better Auth configuration", () => {
       revokeSessionsOnPasswordReset: true,
     });
     expect(authentication.options.advanced?.database?.generateId).toBe("uuid");
+    expect(authentication.options.rateLimit).toEqual({
+      enabled: true,
+      max: 100,
+      storage: "memory",
+      window: 60,
+    });
+    expect(authentication.options.trustedOrigins).toEqual(["http://localhost:5173"]);
     expect(authentication.options.database).toBeFunction();
     expect((await authentication.$context).adapter.id).toBe("drizzle");
   });

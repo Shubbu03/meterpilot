@@ -47,3 +47,27 @@ export function canRemoveMembership(
 export function canManageApiKeys(role: OrganizationMembershipRole): boolean {
   return role === "owner" || role === "admin";
 }
+
+export function canManageCustomers(role: OrganizationMembershipRole): boolean {
+  return role === "owner" || role === "admin" || role === "developer";
+}
+
+export function canManageMeters(role: OrganizationMembershipRole): boolean {
+  return role === "owner" || role === "admin" || role === "developer";
+}
+
+export function canManageEntitlements(role: OrganizationMembershipRole): boolean {
+  return role === "owner" || role === "admin" || role === "developer";
+}
+
+export function canManageCatalog(role: OrganizationMembershipRole): boolean {
+  return role === "owner" || role === "admin" || role === "developer";
+}
+
+export function canManageDataRetention(role: OrganizationMembershipRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
+export function canManageFailedJobs(role: OrganizationMembershipRole): boolean {
+  return role === "owner" || role === "admin";
+}

@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { UsageEvent } from "@meterpilot/contracts/events";
 
-import { canonicalUsageEvent, hashUsageEvent } from "../src/features/events/canonicalization";
+import {
+  canonicalUsageEvent,
+  hashUsageEvent,
+  hashUsageEventCorrection,
+} from "../src/features/events/canonicalization";
 
 const firstEvent: UsageEvent = {
   id: "evt_canonical",
@@ -41,5 +45,30 @@ describe("event canonicalization", () => {
     };
 
     expect(hashUsageEvent(firstEvent)).not.toBe(hashUsageEvent(changed));
+  });
+
+  test("binds a correction idempotency hash to its target and replacement semantics", () => {
+    const first = hashUsageEventCorrection("evt_original", {
+      event: firstEvent,
+      kind: "replace",
+    });
+    const reordered = hashUsageEventCorrection("evt_original", {
+      event: {
+        ...firstEvent,
+        properties: {
+          nested: { beta: "2", alpha: true },
+          array: ["first", "second"],
+        },
+      },
+      kind: "replace",
+    });
+
+    expect(first).toBe(reordered);
+    expect(first).not.toBe(
+      hashUsageEventCorrection("evt_different_target", { event: firstEvent, kind: "replace" }),
+    );
+    expect(first).not.toBe(
+      hashUsageEventCorrection("evt_original", { id: firstEvent.id, kind: "reverse" }),
+    );
   });
 });
